@@ -1,0 +1,182 @@
+---
+timestamp: 'Mon Oct 20 2025 23:23:01 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251020_232301.5975e77a.md]]'
+content_id: 081419072ae8c0a26aec83ba09d18a7e68e4dbded1d8e67608bc0b7c7c9944b2
+---
+
+# file: src/concepts/PasswordAuthentication/PasswordAuthenticationConcept.ts
+
+```typescript
+import { Collection, Db } from "npm:mongodb";
+import { Empty, ID } from "@utils/types.ts";
+import { freshID } from "@utils/database.ts";
+
+/**
+ * Concept: PasswordAuthentication (User)
+ *
+ * @purpose limit access to known users
+ * @principle after a user registers with a username and a password, they can authenticate with that same username and password and be treated each time as the same user
+ */
+
+// Declare collection prefix, use concept name
+const PREFIX = "PasswordAuthentication" + ".";
+
+// Generic types of this concept
+type User = ID;
+
+/**
+ * State:
+ * a set of Users with
+ *   a username String
+ *   a password String
+ */
+interface UserDocument {
+  _id: User;
+  username: string;
+  password: string; // In a real app, this should be hashed and salted. For now, we'll stick with plaintext for simplicity.
+}
+
+export default class PasswordAuthenticationConcept {
+  private users: Collection<UserDocument>;
+
+  constructor(private readonly db: Db) {
+    this.users = this.db.collection(PREFIX + "users");
+  }
+
+  /**
+   * Action: register
+   *
+   * @requires username to not already exist in the set of Users
+   * @effects creates a new user of that username and password, adds that user to the set of users, and returns the new user
+   */
+  async register(
+    { username, password }: { username: string; password: string },
+  ): Promise<{ user: User } | { error: string }> {
+    // Check precondition: username must not already exist
+    const existingUser = await this.users.findOne({ username: username });
+    if (existingUser) {
+      return { error: "Username already taken." };
+    }
+
+    // Effect: Create a new user
+    const newUser: UserDocument = {
+      _id: freshID() as User,
+      username: username,
+      password: password, // In a real app, hash this password!
+    };
+
+    await this.users.insertOne(newUser);
+
+    return { user: newUser._id };
+  }
+
+  /**
+   * Action: authenticate
+   *
+   * @requires user of the argument username and password to exist in the set of Users
+   * @effects returns the corresponding User
+   */
+  async authenticate(
+    { username, password }: { username: string; password: string },
+  ): Promise<{ user: User } | { error: string }> {
+    // Check precondition: user with username and password must exist
+    const user = await this.users.findOne({
+      username: username,
+      password: password, // In a real app, compare with hashed password!
+    });
+
+    if (!user) {
+      return { error: "Invalid username or password." };
+    }
+
+    // Effect: Return the corresponding User
+    return { user: user._id };
+  }
+
+  /**
+   * Query: _getUserByUsername
+   * Internal query to retrieve a user document by username.
+   *
+   * @effects returns an array containing the user document if found, otherwise an empty array.
+   */
+  async _getUserByUsername(
+    username: string,
+  ): Promise<UserDocument[]> {
+    const user = await this.users.findOne({ username: username });
+    return user ? [user] : []; // Wrap the found user in an array, or return an empty array
+  }
+
+  /**
+   * Query: _getUserById
+   * Internal query to retrieve a user document by ID.
+   *
+   * @effects returns an array containing the user document if found, otherwise an empty array.
+   */
+  async _getUserById(id: User): Promise<UserDocument[]> {
+    const user = await this.users.findOne({ _id: id });
+    return user ? [user] : []; // Wrap the found user in an array, or return an empty array
+  }
+
+  /**
+   * Query: _getAllUsers
+   * Internal query to retrieve all user documents.
+   *
+   * @effects returns an array of all user documents.
+   */
+  async _getAllUsers(): Promise<UserDocument[]> {
+    return await this.users.find({}).toArray();
+  }
+
+  /**
+   * Query: _userExistsById
+   *
+   * @requires true
+   * @effects returns `[true]` if a user with the given ID exists, otherwise `[]`
+   */
+  async _userExistsById({ user }: { user: User }): Promise<boolean[]> {
+    const foundUser = await this.users.findOne({ _id: user });
+    return foundUser ? [true] : [];
+  }
+
+  /**
+   * Query: _userExistsByUsername
+   *
+   * @requires true
+   * @effects returns `[true]` if a user with the given username exists, otherwise `[]`
+   */
+  async _userExistsByUsername({ username }: {
+    username: string;
+  }): Promise<boolean[]> {
+    const foundUser = await this.users.findOne({ username: username });
+    return foundUser ? [true] : [];
+  }
+}
+
+```
+
+## Commenting
+
+Specification:
+
+**Concept: Commenting (User, Post)**
+
+* **purpose** enable discussion around shared posts
+* **principle** users can comment on posts. Comments can be added, deleted, and edited.
+* **state**
+  * a set of Comments with
+    * an author User
+    * a content String
+    * an associated Post
+    * a creation date Date
+* **actions**
+  * addComment (author: User, content: String, post: Post): (comment: Comment)
+    * *requires* author and post must exist, content cannot be empty
+    * *effects* creates a comment authored by the user under the post with the content as text
+  * deleteComment (user: User, comment: Comment)
+    * *requires* comment must exist, comment must be authored by the user
+    * *effects* deletes the comment
+  * editComment (user: User, comment: Comment, new\_content: String)
+    * *requires* comment must exist, comment must be authored by the user, new\_content cannot be empty
+    * *effects* edits the comment content to be that of new\_content
+
+Code:
