@@ -6,13 +6,7 @@ Testing concepts involves primarily:
     - **effects** is satisfied: after the action is performed, we can verify that the state did indeed change according to the effect (or the return is correctly specified).
 2. Ensuring that the **principle** is fully modeled by the actions:
     - Demonstrate that the series of actions described in the **principle**, when performed, result in the specified behavior or updates to state.
-
-Tests should cover the basic behavior of the concept but should also include some more interesting cases. They should also print helpful messages to the console with action inputs and outputs so that a human reader can make sense of the test execution when it runs in the console. Some more details about the test cases:
-* Operational principle. A sequence of action executions that corresponds to the operational principle, representing the common expected usage of the concept. These sequence is not required to use all the actions; operational principles often do not include a deletion action, for example.
-* Interesting scenarios. Sequences of action executions that correspond to less common cases: probing interesting corners of the functionality, undoing actions with deletions and cancellations, repeating actions with the same arguments, etc. In some of these scenarios actions may be expected to throw errors.
-* Number required. For each concept, you should have one test sequence for the operational principle, and 3-5 additional interesting scenarios. Every action should be executed successfully in at least one of the scenarios.
-* No state setup. Your test cases should not require any setting up of the concept state except by calling concept actions. When you are testing one action at a time, this means that you will want to order your actions carefully (for example, by the operational principle) to avoid having to set up state.
-
+    
 # approach: steps to testing
 
 The following prefix format for header 1 blocks denote the relevant steps:
@@ -48,3 +42,8 @@ Use the Deno.test framework, splitting by appropriate test steps and describing 
 import { assertEquals } from "jsr:@std/assert"; // or any other utility from the library
 ```
 
+# Legible testing
+
+ - Each test should output what it is doing and the trace of any actions, to help with debugging and increasing confidence that the concept or action is doing what it says.
+ - Principle tests and tests involving multiple actions should explain how it aligns with expectations.
+ - For action tests, the output should explain how requirements are met and how effects are confirmed.
