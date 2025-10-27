@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "@std/assert";
 import { freshID, testDb } from "@utils/database.ts"; // Assuming @utils/database.ts provides testDb and freshID
 import { ID } from "@utils/types.ts"; // Assuming @utils/types.ts provides ID
 
@@ -11,9 +11,10 @@ Deno.test("Posting Concept Tests", async (t) => {
 
   const userAlice = "user:Alice" as ID;
   const userBob = "user:Bob" as ID;
-  const image1 = "image:unsplash_abc1" as ID;
-  const image2 = "image:unsplash_xyz2" as ID;
-  const image3 = "image:unsplash_def3" as ID;
+  // Images now represented as URL strings
+  const image1 = "https://example.com/images/unsplash_abc1.jpg";
+  const image2 = "https://example.com/images/unsplash_xyz2.jpg";
+  const image3 = "https://example.com/images/unsplash_def3.jpg";
 
   await t.step(
     "Principle: Users can create, edit, and delete their posts",

@@ -1,8 +1,9 @@
-import { Hono } from "jsr:@hono/hono";
+import { Hono } from "hono";
 import { getDb } from "@utils/database.ts";
-import { walk } from "jsr:@std/fs";
-import { parseArgs } from "jsr:@std/cli/parse-args";
-import { toFileUrl } from "jsr:@std/path/to-file-url";
+import { walk } from "@std/fs/walk";
+import { parseArgs } from "@std/cli/parse-args";
+import { toFileUrl } from "@std/path/to-file-url";
+import { generateV4SignedUrl } from "@utils/gcs.ts";
 
 // Parse command-line arguments for port and base URL
 const flags = parseArgs(Deno.args, {
@@ -25,6 +26,53 @@ async function main() {
   const app = new Hono();
 
   app.get("/", (c) => c.text("Concept Server is running."));
+
+  // Storage: Generate GCS V4 pre-signed upload URL
+  app.post(`${BASE_URL}/storage/gcs/upload-url`, async (c) => {
+    try {
+      const body = await c.req.json().catch(() => ({}));
+      const bucket = String(body.bucket ?? "").trim();
+      const object = String(body.object ?? "").trim();
+      const expiresInSeconds = Number(body.expiresInSeconds ?? 900);
+      if (!bucket || !object) {
+        return c.json({ error: "bucket and object are required" }, 400);
+      }
+      const url = await generateV4SignedUrl({
+        method: "PUT",
+        bucket,
+        object,
+        expiresInSeconds,
+      });
+      return c.json({ url });
+    } catch (e) {
+      console.error("/storage/gcs/upload-url error:", e);
+      return c.json({ error: "Failed to generate signed URL" }, 500);
+    }
+  });
+
+  // Storage: Generate GCS V4 pre-signed download URL (GET)
+  app.post(`${BASE_URL}/storage/gcs/download-url`, async (c) => {
+    try {
+      const body = await c.req.json().catch(() => ({}));
+      const bucket = String(body.bucket ?? "").trim();
+      const object = String(body.object ?? "").trim();
+      const expiresInSeconds = Number(body.expiresInSeconds ?? 300);
+      if (!bucket || !object) {
+        return c.json({ error: "bucket and object are required" }, 400);
+      }
+      // TODO: Verify the requester is allowed to access this object (user/friends) before issuing a URL
+      const url = await generateV4SignedUrl({
+        method: "GET",
+        bucket,
+        object,
+        expiresInSeconds,
+      });
+      return c.json({ url, expiresInSeconds });
+    } catch (e) {
+      console.error("/storage/gcs/download-url error:", e);
+      return c.json({ error: "Failed to generate signed URL" }, 500);
+    }
+  });
 
   // --- Dynamic Concept Loading and Routing ---
   console.log(`Scanning for concepts in ./${CONCEPTS_DIR}...`);

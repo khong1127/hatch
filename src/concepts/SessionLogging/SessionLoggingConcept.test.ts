@@ -1,13 +1,19 @@
-import { assertEquals, assertExists, assertNotEquals } from "jsr:@std/assert";
-import { freshID, testDb } from "../../utils/database.ts"; // Adjust path as needed for your project structure
-import { Empty, ID } from "../../utils/types.ts"; // Adjust path as needed for your project structure
+import {
+  assertEquals,
+  assertExists,
+  assertNotEquals as _assertNotEquals,
+} from "@std/assert";
+import { freshID as _freshID, testDb } from "../../utils/database.ts"; // Adjust path as needed for your project structure
+import { Empty as _Empty, ID } from "../../utils/types.ts"; // Adjust path as needed for your project structure
 import SessionLoggingConcept from "./SessionLoggingConcept.ts";
 
 // Helper for checking if a result is an error object
-const isError = (result: any): result is { error: string } => "error" in result;
+function isError(result: unknown): result is { error: string } {
+  return !!result && typeof result === "object" && "error" in result;
+}
 
 // Utility to print action and result for better test trace readability
-const logAction = (actionName: string, inputs: any, result: any) => {
+const logAction = (actionName: string, inputs: unknown, result: unknown) => {
   console.log(`\n--- Action: ${actionName} ---`);
   console.log("  Inputs:", inputs);
   console.log("  Result:", result);
@@ -22,11 +28,12 @@ Deno.test("SessionLogging Concept Tests", async (t) => {
   // Mock User and Image IDs using type branding
   const userAlice = "user:Alice" as ID;
   const userBob = "user:Bob" as ID;
-  const image1 = "image:photo1.jpg" as ID;
-  const image2 = "image:photo2.png" as ID;
-  const image3 = "image:photo3.jpeg" as ID;
-  const image4 = "image:photo4.jpg" as ID;
-  const image5 = "image:photo5.jpeg" as ID;
+  // Images now represented as URL strings
+  const image1 = "https://example.com/images/photo1.jpg";
+  const image2 = "https://example.com/images/photo2.png";
+  const image3 = "https://example.com/images/photo3.jpeg";
+  const image4 = "https://example.com/images/photo4.jpg";
+  const image5 = "https://example.com/images/photo5.jpeg";
 
   // # trace: Operational Principle - Start, Add, End Session, and Verify Persistence
   await t.step(
@@ -80,7 +87,9 @@ Deno.test("SessionLogging Concept Tests", async (t) => {
         0,
         "Session should start with no images.",
       );
-      let aliceSessions = await concept._getSessionsByUser({ user: userAlice });
+      const aliceSessions = await concept._getSessionsByUser({
+        user: userAlice,
+      });
       assertEquals(
         aliceSessions.includes(sessionAlice1),
         true,

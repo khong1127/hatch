@@ -1,19 +1,14 @@
-[@api-extraction](api-extraction-from-code.md)
-
-# prompt: Please extract an API for the following concept:
-
-## File
-
-Code:
-
-[@FileConcept.ts](../../src/concepts/File/FileConcept.ts)
-# response:
+---
+timestamp: 'Sun Oct 26 2025 23:48:49 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251026_234849.a287abc2.md]]'
+content_id: f82d73e24a3cbed0aa90f2de437a56460abdfffe5b56401f71c1568685f42baf
+---
 
 # API Specification: File Concept
 
 **Purpose:** Manage user-owned files, supporting secure upload, storage, and retrieval of content.
 
----
+***
 
 ## API Endpoints
 
@@ -23,14 +18,14 @@ Code:
 
 **Requirements:**
 
-*   `user` ID must be provided.
-*   `filename` must be provided.
-*   The `GCS_BUCKET` environment variable must be set on the server.
+* `user` ID must be provided.
+* `filename` must be provided.
+* The `GCS_BUCKET` environment variable must be set on the server.
 
 **Effects:**
 
-*   Generates a new, time-limited, signed PUT URL valid for uploading a file to the configured cloud storage bucket.
-*   Returns the `uploadUrl`, the target `bucket` name, and the generated `object` path for the file.
+* Generates a new, time-limited, signed PUT URL valid for uploading a file to the configured cloud storage bucket.
+* Returns the `uploadUrl`, the target `bucket` name, and the generated `object` path for the file.
 
 **Request Body:**
 
@@ -61,7 +56,7 @@ Code:
 }
 ```
 
----
+***
 
 ### POST /api/File/confirmUpload
 
@@ -69,14 +64,14 @@ Code:
 
 **Requirements:**
 
-*   `user` ID must be provided.
-*   `object` path (from `requestUploadUrl`) must be provided.
-*   The `GCS_BUCKET` environment variable must be set on the server.
+* `user` ID must be provided.
+* `object` path (from `requestUploadUrl`) must be provided.
+* The `GCS_BUCKET` environment variable must be set on the server.
 
 **Effects:**
 
-*   Creates a new `FileId` and stores a new file document in the database, associating it with the `user`, `bucket`, `object` path, `contentType`, `size`, and `createdAt` timestamp.
-*   Returns the newly created `file` ID and a direct public `url` to the stored file.
+* Creates a new `FileId` and stores a new file document in the database, associating it with the `user`, `bucket`, `object` path, `contentType`, `size`, and `createdAt` timestamp.
+* Returns the newly created `file` ID and a direct public `url` to the stored file.
 
 **Request Body:**
 
@@ -106,7 +101,7 @@ Code:
 }
 ```
 
----
+***
 
 ### POST /api/File/getViewUrl
 
@@ -114,15 +109,15 @@ Code:
 
 **Requirements:**
 
-*   `user` ID must be provided.
-*   `object` path must be provided.
-*   The `GCS_BUCKET` environment variable must be set on the server.
+* `user` ID must be provided.
+* `object` path must be provided.
+* The `GCS_BUCKET` environment variable must be set on the server.
 
 **Effects:**
 
-*   Generates a new, time-limited, signed GET URL for the specified `object` in the configured cloud storage bucket.
-*   Returns the generated `url` for viewing the file.
-*   *Note: This action does not perform access control; it assumes the caller is authorized to view the file.*
+* Generates a new, time-limited, signed GET URL for the specified `object` in the configured cloud storage bucket.
+* Returns the generated `url` for viewing the file.
+* *Note: This action does not perform access control; it assumes the caller is authorized to view the file.*
 
 **Request Body:**
 
@@ -150,20 +145,20 @@ Code:
 }
 ```
 
----
+***
 
-### POST /api/File/_getFileById
+### POST /api/File/\_getFileById
 
 **Description:** Retrieves the metadata for a specific file by its unique ID.
 
 **Requirements:**
 
-*   `file` ID must be provided.
+* `file` ID must be provided.
 
 **Effects:**
 
-*   Returns an array containing a single object, where the `file` key holds the `FileDocument` metadata if found.
-*   Returns an empty array if no file with the given ID exists.
+* Returns an array containing a single object, where the `file` key holds the `FileDocument` metadata if found.
+* Returns an empty array if no file with the given ID exists.
 
 **Request Body:**
 
@@ -199,20 +194,20 @@ Code:
 }
 ```
 
----
+***
 
-### POST /api/File/_getFilesByOwner
+### POST /api/File/\_getFilesByOwner
 
 **Description:** Retrieves a list of all file metadata documents owned by a specific user.
 
 **Requirements:**
 
-*   `user` ID must be provided.
+* `user` ID must be provided.
 
 **Effects:**
 
-*   Returns an array containing a single object. This object has a `files` key, whose value is an array of `FileDocument`s associated with the given `user`, sorted by creation date (newest first).
-*   Returns an array containing a single object with an empty `files` array if the user has no files.
+* Returns an array containing a single object. This object has a `files` key, whose value is an array of `FileDocument`s associated with the given `user`, sorted by creation date (newest first).
+* Returns an array containing a single object with an empty `files` array if the user has no files.
 
 **Request Body:**
 
@@ -260,4 +255,4 @@ Code:
 }
 ```
 
----
+***

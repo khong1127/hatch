@@ -1,4 +1,4 @@
-import { Collection, Db } from "npm:mongodb";
+import { Collection, Db } from "mongodb";
 import { Empty, ID } from "@utils/types.ts"; // Assuming @utils/types.ts provides ID and Empty
 import { freshID } from "@utils/database.ts"; // Assuming @utils/database.ts provides freshID
 
@@ -15,7 +15,8 @@ const PREFIX = "Posting" + ".";
 
 // Generic types of this concept
 type User = ID;
-type Image = ID; // Image IDs could reference another concept that manages images, or simply be URLs/paths.
+// Images are now URL strings rather than IDs
+type ImageUrl = string;
 type Post = ID;
 
 /**
@@ -28,7 +29,7 @@ type Post = ID;
 interface PostDocument {
   _id: Post;
   caption: string;
-  images: Image[];
+  images: ImageUrl[];
   author: User;
   createdAt: Date;
 }
@@ -49,7 +50,11 @@ export default class PostingConcept {
    * effects: creates a new post authored by the user with its content being the caption and images given.
    */
   async create(
-    { user, images, caption }: { user: User; images: Image[]; caption: string },
+    { user, images, caption }: {
+      user: User;
+      images: ImageUrl[];
+      caption: string;
+    },
   ): Promise<{ post: Post } | { error: string }> {
     if (!user) {
       return { error: "User ID must be provided." };

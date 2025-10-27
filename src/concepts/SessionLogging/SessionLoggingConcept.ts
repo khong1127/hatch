@@ -1,4 +1,4 @@
-import { Collection, Db } from "npm:mongodb";
+import { Collection, Db } from "mongodb";
 import { Empty, ID } from "../../utils/types.ts"; // Assuming utils is at a higher level
 import { freshID } from "../../utils/database.ts"; // Assuming utils is at a higher level
 
@@ -7,7 +7,8 @@ const PREFIX = "SessionLogging" + ".";
 
 // Generic types of this concept as per the concept definition
 type User = ID;
-type Image = ID;
+// Images are URL strings, not IDs
+type Image = string;
 type Session = ID; // The ID for a session instance
 
 /**
