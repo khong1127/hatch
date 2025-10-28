@@ -1,3 +1,12 @@
+---
+timestamp: 'Tue Oct 28 2025 00:45:17 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251028_004517.0d4e6978.md]]'
+content_id: fc430eb3607696ac6665d3e7320d07c22940bc7b1c08d6e98b0b7b7f2b70cf67
+---
+
+# file: src/concepts/File/FileConcept.ts
+
+```typescript
 import { Collection, Db } from "mongodb";
 import { Empty as _Empty, ID } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
@@ -19,15 +28,11 @@ interface FileDocument {
   createdAt: Date;
 }
 
-type SignUrlFn = typeof generateV4SignedUrl;
-
 export default class FileConcept {
   private files: Collection<FileDocument>;
-  private readonly signUrl: SignUrlFn;
 
-  constructor(private readonly db: Db, deps?: { signUrl?: SignUrlFn }) {
+  constructor(private readonly db: Db) {
     this.files = this.db.collection(PREFIX + "files");
-    this.signUrl = deps?.signUrl ?? generateV4SignedUrl;
   }
 
   private requireBucket(): string {
@@ -37,20 +42,8 @@ export default class FileConcept {
   }
 
   private safeName(name: string): string {
-    // Sanitize filename for object key:
-    // - Remove path separators
-    // - Replace whitespace with '-'
-    // - Replace non [A-Za-z0-9._-] with '-'
-    // - Collapse multiple '-'
-    // - Trim leading/trailing '-'
-    // - Fallback to 'file' if empty
-    let s = name.replace(/[\\/]+/g, "-");
-    s = s.replace(/\s+/g, "-");
-    s = s.replace(/[^A-Za-z0-9._-]+/g, "-");
-    s = s.replace(/-+/g, "-");
-    s = s.replace(/^-+/, "").replace(/-+$/, "");
-    if (!s) s = "file";
-    return s;
+    // Basic sanitization: remove path traversal and spaces
+    return name.replace(/\\/g, "").replace(/\/+/, "/").replace(/\s+/g, "-");
   }
 
   // action: requestUploadUrl (user: User, filename: string, contentType?: string): { uploadUrl: string, bucket: string, object: string }
@@ -68,16 +61,11 @@ export default class FileConcept {
       input;
     if (!user) return { error: "User ID must be provided." };
     if (!filename) return { error: "filename is required" };
-    let bucket: string;
-    try {
-      bucket = this.requireBucket();
-    } catch (_) {
-      return { error: "GCS_BUCKET env var is required" };
-    }
+    const bucket = this.requireBucket();
     const base = `${user}/${Date.now()}-${this.safeName(filename)}`;
     const object = base;
     try {
-      const uploadUrl = await this.signUrl({
+      const uploadUrl = await generateV4SignedUrl({
         method: "PUT",
         bucket,
         object,
@@ -97,12 +85,7 @@ export default class FileConcept {
     const { user, object, contentType, size } = input;
     if (!user) return { error: "User ID must be provided." };
     if (!object) return { error: "object is required" };
-    let bucket: string;
-    try {
-      bucket = this.requireBucket();
-    } catch (_) {
-      return { error: "GCS_BUCKET env var is required" };
-    }
+    const bucket = this.requireBucket();
 
     const fileId = freshID();
     const doc: FileDocument = {
@@ -132,14 +115,9 @@ export default class FileConcept {
     const { user, object, expiresInSeconds } = input;
     if (!user) return { error: "User ID must be provided." };
     if (!object) return { error: "object is required" };
-    let bucket: string;
+    const bucket = this.requireBucket();
     try {
-      bucket = this.requireBucket();
-    } catch (_) {
-      return { error: "GCS_BUCKET env var is required" };
-    }
-    try {
-      const url = await this.signUrl({
+      const url = await generateV4SignedUrl({
         method: "GET",
         bucket,
         object,
@@ -170,3 +148,5 @@ export default class FileConcept {
     return { files };
   }
 }
+
+```

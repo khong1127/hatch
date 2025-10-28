@@ -1,3 +1,12 @@
+---
+timestamp: 'Tue Oct 28 2025 01:02:46 GMT-0400 (Eastern Daylight Time)'
+parent: '[[../20251028_010246.22afb07e.md]]'
+content_id: 21b74516f7027b6f007155cc4f8a8653aeabe7f5134bab1db30be4180adb0b3d
+---
+
+# file: src/concepts/File/FileConcept.ts
+
+```typescript
 import { Collection, Db } from "mongodb";
 import { Empty as _Empty, ID } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
@@ -170,3 +179,5 @@ export default class FileConcept {
     return { files };
   }
 }
+
+```
