@@ -1,3 +1,12 @@
+---
+timestamp: 'Thu Nov 06 2025 04:22:53 GMT-0500 (Eastern Standard Time)'
+parent: '[[../20251106_042253.3acb7487.md]]'
+content_id: 2beff9c7f9ed134443bd328f0a713a1778d533bb0b68adfa75bf768d8dd4f3dd
+---
+
+# file: src/concepts/Commenting/CommentingConcept.test.ts
+
+```typescript
 import {
   assertEquals,
   assertNotEquals,
@@ -592,11 +601,9 @@ Deno.test("Commenting Concept Tests", async (test) => {
     );
 
     // Cleanup remaining comment on PostY
-    await commentingConcept.deleteComment({
-      user: mockUserA,
-      comment: commentYId,
-    });
+    await commentingConcept.deleteComment({ user: mockUserA, comment: commentYId });
   });
 
   await client.close();
 });
+```

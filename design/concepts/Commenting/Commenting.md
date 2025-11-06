@@ -17,3 +17,7 @@
     * editComment (user: User, comment: Comment, new_content: String) 
         * *requires* comment must exist, comment must be authored by the user, new_content cannot be empty
         * *effects* edits the comment content to be that of new_content
+    * deleteAllCommentsForPost (post: Post)
+        * *requires* post must exist
+        * *effects* deletes all comments associated with that post
+        * Note: this is an internal method only

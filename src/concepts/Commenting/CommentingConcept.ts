@@ -110,6 +110,33 @@ export default class CommentingConcept {
   }
 
   /**
+   * deleteAllCommentsForPost (post: Post)
+   *
+   * @requires post must exist
+   * @effects deletes all comments associated with that post
+   * Note: this is an internal method only
+   */
+  async deleteAllCommentsForPost(
+    { post }: { post: Post },
+  ): Promise<Empty | { error: string }> {
+    try {
+      // effects: deletes all comments associated with that post
+      const result = await this.comments.deleteMany({ post });
+
+      if (result.acknowledged) {
+        // It's a success even if deletedCount is 0, as the state is correct (no comments for the post).
+        return {};
+      } else {
+        // This case is unlikely with modern drivers but is included for completeness.
+        return { error: "Database operation was not acknowledged." };
+      }
+    } catch (e) {
+      console.error(`Failed to delete comments for post ${post}:`, e);
+      return { error: "Failed to delete comments due to a database error." };
+    }
+  }
+
+  /**
    * editComment (user: User, comment: Comment, new_content: String)
    *
    * @requires comment must exist, comment must belong to the user, new_content cannot be empty

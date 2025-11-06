@@ -127,3 +127,22 @@ Result: { comment: "0199e615-71e6-760f-9515-bf0daff51749" }
 
 Query: _getCommentsByAuthor(user:Alice)
 Result: [ "Alice on PostY.", "Alice on PostX." ]
+
+--- Scenario 6: deleteAllCommentsForPost ---
+Setup: Adding comments to PostX and PostY.
+Action: deleteAllCommentsForPost(post:Article123)
+Result: {}
+Query: _getCommentsForPost(PostX) after deletion. Result: { comments: [] }
+Query: _getCommentsForPost(PostY) after deletion. Result: {
+  comments: [
+    {
+      _id: "019a587b-b47d-79f8-8f13-85663db4a9c8",
+      author: "user:Alice",
+      content: "Comment on PostY",
+      post: "post:Image456",
+      createdAt: 2025-11-06T09:24:53.502Z
+    }
+  ]
+}
+Action: deleteAllCommentsForPost(post:NewPost789) (on a post with no comments)
+Result: {}

@@ -1,0 +1,40 @@
+---
+timestamp: 'Thu Nov 06 2025 04:21:54 GMT-0500 (Eastern Standard Time)'
+parent: '[[../20251106_042154.0b5059ba.md]]'
+content_id: b531ed781551a88c8419806dc0ac7ed756aff68099ff2361ad908c97d83f63a2
+---
+
+# file: deno.json
+
+```json
+{
+    "imports": {
+        "@concepts/": "./src/concepts/",
+        "@concepts": "./src/concepts/concepts.ts",
+        "@test-concepts": "./src/concepts/test_concepts.ts",
+        "@utils/": "./src/utils/",
+        "@engine": "./src/engine/mod.ts",
+        "@syncs": "./src/syncs/syncs.ts",
+        "hono": "jsr:@hono/hono@^4",
+        "@std/fs/walk": "jsr:@std/fs@^1/walk",
+        "@std/cli/parse-args": "jsr:@std/cli@^1/parse-args",
+            "@std/path/to-file-url": "jsr:@std/path@^1/to-file-url",
+            "@std/assert": "jsr:@std/assert@^1",
+            "mongodb": "npm:mongodb@^6"
+    },
+    "tasks": {
+        "start": "deno run --allow-net --allow-write --allow-read --allow-sys --allow-env src/main.ts",
+        "concepts": "deno run --allow-net --allow-read --allow-sys --allow-env src/concept_server.ts --port 8000 --baseUrl /api",
+        "import": "deno run --allow-read --allow-write --allow-env src/utils/generate_imports.ts",
+        "build": "deno run import"
+    },
+    "lint": {
+        "rules": {
+            "exclude": [
+                "no-import-prefix",
+                "no-unversioned-import"
+            ]
+        }
+    }
+}
+```

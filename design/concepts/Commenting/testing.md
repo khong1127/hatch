@@ -4,8 +4,12 @@
 
 [@commenting-testing](../../../src/concepts/Commenting/CommentingConcept.test.ts)
 
-# prompt: Please edit tests using getComment now that its return type has been changed from CommentDocument to CommentDocument[]
+# prompt: Please write some tests for the new action, deleteAllCommentsForPost.
 # response:
+
+# solution:
+
+# file: src/concepts/Commenting/CommentingConcept.test.ts
 
 ```typescript
 import {
@@ -64,7 +68,8 @@ Deno.test("Commenting Concept Tests", async (test) => {
     );
     if ("error" in getCommentResult1) {
       throw new AssertionError({
-        message: `Comment ${commentId} should be found, but an error was returned: ${getCommentResult1.error}`,
+        message:
+          `Comment ${commentId} should be found, but an error was returned: ${getCommentResult1.error}`,
       });
     }
     // Access the first element of the 'comments' array as per the updated return type
@@ -103,7 +108,8 @@ Deno.test("Commenting Concept Tests", async (test) => {
     );
     if ("error" in getCommentResult2) {
       throw new AssertionError({
-        message: `Edited comment ${commentId} should be found, but an error was returned: ${getCommentResult2.error}`,
+        message:
+          `Edited comment ${commentId} should be found, but an error was returned: ${getCommentResult2.error}`,
       });
     }
     // Access the first element of the 'comments' array as per the updated return type
@@ -136,7 +142,6 @@ Deno.test("Commenting Concept Tests", async (test) => {
       "Query: _getComment(" + commentId + ") Result:",
       getCommentResult3,
     );
-    // The query explicitly returns { error: string } when not found, so this check is still valid.
     assertEquals(
       (getCommentResult3 as { error: string }).error,
       `Comment with ID '${commentId}' not found.`,
@@ -204,13 +209,30 @@ Deno.test("Commenting Concept Tests", async (test) => {
 
     // Add a comment first for subsequent tests
     const commentToAdd = "A valid comment.";
+    console.log(
+      `Action: addComment(${mockUserA}, "${commentToAdd}", ${mockPostX})`,
+    );
     const addResult = await commentingConcept.addComment({
       author: mockUserA,
       content: commentToAdd,
       post: mockPostX,
     });
-    if ("error" in addResult) throw new AssertionError({ message: addResult.error });
     const userACommentId = (addResult as { comment: ID }).comment;
+
+    // Verify the comment was added
+    const getCommentResult1 = await commentingConcept._getComment({
+      comment: userACommentId,
+    });
+    console.log(
+      "Query: _getComment(" + userACommentId + ") Result:",
+      getCommentResult1,
+    );
+    if ("error" in getCommentResult1) {
+      throw new AssertionError({
+        message:
+          `Comment ${userACommentId} should be found, but an error was returned: ${getCommentResult1.error}`,
+      });
+    }
 
     // 2. UserB tries to delete UserA's comment
     console.log(
@@ -258,13 +280,30 @@ Deno.test("Commenting Concept Tests", async (test) => {
 
     // Add a comment first for subsequent tests
     const commentToAdd = "Initial content.";
+    console.log(
+      `Action: addComment(${mockUserA}, "${commentToAdd}", ${mockPostX})`,
+    );
     const addResult = await commentingConcept.addComment({
       author: mockUserA,
       content: commentToAdd,
       post: mockPostX,
     });
-    if ("error" in addResult) throw new AssertionError({ message: addResult.error });
     const userACommentId = (addResult as { comment: ID }).comment;
+
+    // Verify the comment was added
+    const getCommentResult1 = await commentingConcept._getComment({
+      comment: userACommentId,
+    });
+    console.log(
+      "Query: _getComment(" + userACommentId + ") Result:",
+      getCommentResult1,
+    );
+    if ("error" in getCommentResult1) {
+      throw new AssertionError({
+        message:
+          `Comment ${userACommentId} should be found, but an error was returned: ${getCommentResult1.error}`,
+      });
+    }
 
     // 2. UserB tries to edit UserA's comment
     console.log(
@@ -319,7 +358,6 @@ Deno.test("Commenting Concept Tests", async (test) => {
       content: commentA1Content,
       post: mockPostX,
     });
-    if ("error" in addResultA1) throw new AssertionError({ message: addResultA1.error });
     const commentA1Id = (addResultA1 as { comment: ID }).comment;
     console.log("Result:", addResultA1);
 
@@ -333,7 +371,6 @@ Deno.test("Commenting Concept Tests", async (test) => {
       content: commentB1Content,
       post: mockPostX,
     });
-    if ("error" in addResultB1) throw new AssertionError({ message: addResultB1.error });
     const commentB1Id = (addResultB1 as { comment: ID }).comment;
     console.log("Result:", addResultB1);
 
@@ -347,7 +384,6 @@ Deno.test("Commenting Concept Tests", async (test) => {
       content: commentA2Content,
       post: mockPostX,
     });
-    if ("error" in addResultA2) throw new AssertionError({ message: addResultA2.error });
     const commentA2Id = (addResultA2 as { comment: ID }).comment;
     console.log("Result:", addResultA2);
 
@@ -406,7 +442,6 @@ Deno.test("Commenting Concept Tests", async (test) => {
       content: commentA1Content,
       post: mockPostX,
     });
-    if ("error" in addResultA1) throw new AssertionError({ message: addResultA1.error });
     const commentA1Id = (addResultA1 as { comment: ID }).comment;
     console.log("Result:", addResultA1);
 
@@ -420,7 +455,6 @@ Deno.test("Commenting Concept Tests", async (test) => {
       content: commentA2Content,
       post: mockPostY,
     });
-    if ("error" in addResultA2) throw new AssertionError({ message: addResultA2.error });
     const commentA2Id = (addResultA2 as { comment: ID }).comment;
     console.log("Result:", addResultA2);
 
@@ -434,7 +468,6 @@ Deno.test("Commenting Concept Tests", async (test) => {
       content: commentB1Content,
       post: mockPostX,
     });
-    if ("error" in addResultB1) throw new AssertionError({ message: addResultB1.error });
     const commentB1Id = (addResultB1 as { comment: ID }).comment;
     console.log("Result:", addResultB1);
 
@@ -472,6 +505,108 @@ Deno.test("Commenting Concept Tests", async (test) => {
       user: mockUserB,
       comment: commentB1Id,
     });
+  });
+
+  await test.step("Scenario 6: deleteAllCommentsForPost action", async () => {
+    console.log("\n--- Scenario 6: deleteAllCommentsForPost ---");
+
+    // Setup: Add multiple comments to PostX and one to PostY
+    console.log("Setup: Adding comments to PostX and PostY.");
+    await commentingConcept.addComment({
+      author: mockUserA,
+      content: "First comment on PostX",
+      post: mockPostX,
+    });
+    await commentingConcept.addComment({
+      author: mockUserB,
+      content: "Second comment on PostX",
+      post: mockPostX,
+    });
+    const addResultY = await commentingConcept.addComment({
+      author: mockUserA,
+      content: "Comment on PostY",
+      post: mockPostY,
+    });
+    const commentYId = (addResultY as { comment: ID }).comment;
+
+    // Verify initial state
+    const initialPostXComments = await commentingConcept._getCommentsForPost({
+      post: mockPostX,
+    });
+    assertEquals(
+      initialPostXComments.comments.length,
+      2,
+      "PostX should have 2 comments initially.",
+    );
+    const initialPostYComments = await commentingConcept._getCommentsForPost({
+      post: mockPostY,
+    });
+    assertEquals(
+      initialPostYComments.comments.length,
+      1,
+      "PostY should have 1 comment initially.",
+    );
+
+    // Test Case 1: Delete all comments for PostX
+    console.log(`Action: deleteAllCommentsForPost(${mockPostX})`);
+    const deleteResultX = await commentingConcept.deleteAllCommentsForPost({
+      post: mockPostX,
+    });
+    console.log("Result:", deleteResultX);
+    assertEquals(deleteResultX, {}, "deleteAllCommentsForPost should succeed");
+
+    // Verify effects
+    const finalPostXComments = await commentingConcept._getCommentsForPost({
+      post: mockPostX,
+    });
+    console.log(
+      "Query: _getCommentsForPost(PostX) after deletion. Result:",
+      finalPostXComments,
+    );
+    assertEquals(
+      finalPostXComments.comments.length,
+      0,
+      "All comments for PostX should be deleted.",
+    );
+
+    const finalPostYComments = await commentingConcept._getCommentsForPost({
+      post: mockPostY,
+    });
+    console.log(
+      "Query: _getCommentsForPost(PostY) after deletion. Result:",
+      finalPostYComments,
+    );
+    assertEquals(
+      finalPostYComments.comments.length,
+      1,
+      "Comments for PostY should not be affected.",
+    );
+
+    // Test Case 2: Call action on a post with no comments
+    const mockPostZ: ID = "post:NewPost789" as ID;
+    console.log(
+      `Action: deleteAllCommentsForPost(${mockPostZ}) (on a post with no comments)`,
+    );
+    const deleteResultZ = await commentingConcept.deleteAllCommentsForPost({
+      post: mockPostZ,
+    });
+    console.log("Result:", deleteResultZ);
+    assertEquals(
+      deleteResultZ,
+      {},
+      "deleteAllCommentsForPost should succeed even if there are no comments to delete.",
+    );
+    const finalPostZComments = await commentingConcept._getCommentsForPost({
+      post: mockPostZ,
+    });
+    assertEquals(
+      finalPostZComments.comments.length,
+      0,
+      "PostZ should still have no comments.",
+    );
+
+    // Cleanup remaining comment on PostY
+    await commentingConcept.deleteComment({ user: mockUserA, comment: commentYId });
   });
 
   await client.close();

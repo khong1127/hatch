@@ -1,17 +1,8 @@
-[@concept-design-overview](../../background/concept-design-overview.md)
-
-[@concept-specifications](../../background/concept-specifications.md)
-
-[@implementing-concepts](../../background/implementing-concepts.md)
-
-[@concept-spec](Commenting.md)
-
-[@concept-implementation](../../../src/concepts/Commenting/CommentingConcept.ts)
-
-# prompt: An additional action has been added to the Commenting spec (to be used later for syncs). Please implement it.
-# response:
-
-# solution:
+---
+timestamp: 'Thu Nov 06 2025 04:19:28 GMT-0500 (Eastern Standard Time)'
+parent: '[[../20251106_041928.37886531.md]]'
+content_id: 8f7e5b402d9acbd469dbc38edc26cb52cb307ad39c4197c3248f99e3e680beec
+---
 
 # file: src/concepts/Commenting/CommentingConcept.ts
 
