@@ -339,12 +339,21 @@ export class SyncConcept {
         if (
           typeof value === "function" && value.name.startsWith("_")
         ) {
-          let bound = boundActions.get(value);
+          // Treat queries similarly to actions for sync registration so they can
+          // appear in `when` / `then` lists. We still avoid full instrumentation
+          // overhead (invocation logging + synchronization) by just binding and
+          // attaching the concept metadata expected by `actions(...)`.
+          let bound = boundActions.get(value) as InstrumentedAction | undefined;
           if (bound === undefined) {
-            bound = value.bind(concept);
-            if (bound === undefined) {
+            const queryFn = value.bind(concept);
+            if (queryFn === undefined) {
               throw new Error(`Action ${value} not found.`);
             }
+            // Attach concept metadata so `actions()` doesn't throw.
+            bound = queryFn as InstrumentedAction;
+            bound.concept = concept;
+            // Preserve original for debugging (not used by engine logic for queries)
+            bound.action = queryFn;
             boundActions.set(value, bound);
           }
           return bound;
