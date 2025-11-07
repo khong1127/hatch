@@ -1089,6 +1089,189 @@ export const UserExistsByUsernameApi: Sync = (
   then: actions([Requesting.respond, { request, exists }]),
 });
 
+// --- Query: _userExistsById (API) ---
+export const UserExistsByIdApi: Sync = (
+  { request, user, exists },
+) => ({
+  when: actions(
+    [
+      Requesting.request,
+      { path: "/api/PasswordAuthentication/_userExistsById", user },
+      { request },
+    ],
+  ),
+  where: async (frames) => {
+    return await frames.query(
+      async ({ user: u }) => {
+        const arr = await PasswordAuthentication._userExistsById({ user: u });
+        return [{ exists: Array.isArray(arr) && arr.length > 0 }];
+      },
+      { user },
+      { exists },
+    );
+  },
+  then: actions([Requesting.respond, { request, exists }]),
+});
+
+// --- Posting: create (API) ---
+export const CreatePostApiRequest: Sync = (
+  { request, session, user, images, caption },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Posting/create", session, images, caption },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(SessionLogging._getUser, { session }, { user });
+  },
+  then: actions([Posting.create, { user, images, caption }]),
+});
+
+export const CreatePostApiResponse: Sync = ({ request, post }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Posting/create" }, { request }],
+    [Posting.create, {}, { post }],
+  ),
+  then: actions([Requesting.respond, { request, post }]),
+});
+
+export const CreatePostApiError: Sync = ({ request, error }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Posting/create" }, { request }],
+    [Posting.create, {}, { error }],
+  ),
+  then: actions([Requesting.respond, { request, error }]),
+});
+
+// --- Posting: edit (API) ---
+export const EditPostApiRequest: Sync = (
+  { request, session, user, post, new_caption },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Posting/edit", session, post, new_caption },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(SessionLogging._getUser, { session }, { user });
+  },
+  then: actions([Posting.edit, { user, post, new_caption }]),
+});
+
+export const EditPostApiResponse: Sync = ({ request }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Posting/edit" }, { request }],
+    [Posting.edit, {}, {}],
+  ),
+  then: actions([Requesting.respond, { request, status: "success" }]),
+});
+
+export const EditPostApiError: Sync = ({ request, error }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Posting/edit" }, { request }],
+    [Posting.edit, {}, { error }],
+  ),
+  then: actions([Requesting.respond, { request, error }]),
+});
+
+// --- Posting: delete (API) ---
+export const DeletePostApiRequest: Sync = (
+  { request, session, user, post },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Posting/delete", session, post },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(SessionLogging._getUser, { session }, { user });
+  },
+  then: actions([Posting.delete, { user, post }]),
+});
+
+export const DeletePostApiResponse: Sync = ({ request }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Posting/delete" }, { request }],
+    [Posting.delete, {}, {}],
+  ),
+  then: actions([Requesting.respond, { request, status: "success" }]),
+});
+
+export const DeletePostApiError: Sync = ({ request, error }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Posting/delete" }, { request }],
+    [Posting.delete, {}, { error }],
+  ),
+  then: actions([Requesting.respond, { request, error }]),
+});
+
+// --- Commenting: edit (API) ---
+export const EditCommentApiRequest: Sync = (
+  { request, session, user, comment, new_content },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Commenting/editComment", session, comment, new_content },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(SessionLogging._getUser, { session }, { user });
+  },
+  then: actions([Commenting.editComment, { user, comment, new_content }]),
+});
+
+export const EditCommentApiResponse: Sync = ({ request }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Commenting/editComment" }, { request }],
+    [Commenting.editComment, {}, {}],
+  ),
+  then: actions([Requesting.respond, { request, status: "success" }]),
+});
+
+export const EditCommentApiError: Sync = ({ request, error }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Commenting/editComment" }, { request }],
+    [Commenting.editComment, {}, { error }],
+  ),
+  then: actions([Requesting.respond, { request, error }]),
+});
+
+// --- Commenting: delete (API) ---
+export const DeleteCommentApiRequest: Sync = (
+  { request, session, user, comment },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Commenting/deleteComment", session, comment },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(SessionLogging._getUser, { session }, { user });
+  },
+  then: actions([Commenting.deleteComment, { user, comment }]),
+});
+
+export const DeleteCommentApiResponse: Sync = ({ request }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Commenting/deleteComment" }, {
+      request,
+    }],
+    [Commenting.deleteComment, {}, {}],
+  ),
+  then: actions([Requesting.respond, { request, status: "success" }]),
+});
+
+export const DeleteCommentApiError: Sync = ({ request, error }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Commenting/deleteComment" }, {
+      request,
+    }],
+    [Commenting.deleteComment, {}, { error }],
+  ),
+  then: actions([Requesting.respond, { request, error }]),
+});
+
 // ============================================================================
 // Plain path (no /api base) aliases to respond to current frontend calls
 // ============================================================================
