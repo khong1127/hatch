@@ -1378,6 +1378,432 @@ export const GetFriendsPlain: Sync = ({ request, user, friends }) => ({
   then: actions([Requesting.respond, { request, friends }]),
 });
 
+// Friending: _getFriends (API variant - session authenticates and maps to user id)
+export const GetFriendsApiRequest: Sync = (
+  { request, session, user, friends },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Friending/_getFriends", session },
+    { request },
+  ]),
+  where: async (frames) => {
+    // authenticate session -> user id
+    frames = await frames.query(SessionLogging._getUser, { session }, { user });
+    if (frames.length === 0) return frames;
+    // query friends
+    // adapt Friending._getFriends object return to array of frames
+    return await frames.query(
+      async ({ user: u }) => {
+        const res = await Friending._getFriends({ user: u as ID });
+        return [{ friends: res.friends }];
+      },
+      { user },
+      { friends },
+    );
+  },
+  then: actions([Requesting.respond, { request, friends }]),
+});
+
+// Friending: sendRequest (API) - session authenticates sender
+export const SendFriendRequestApiRequest: Sync = (
+  { request, session, sender, receiver },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Friending/sendRequest", session, receiver },
+    { request },
+  ]),
+  where: async (frames) => {
+    // authenticate session -> sender
+    return await frames.query(SessionLogging._getUser, { session }, { sender });
+  },
+  then: actions([Friending.sendRequest, { sender, receiver }]),
+});
+
+export const SendFriendRequestApiResponse: Sync = (
+  { request, request: reqId },
+) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Friending/sendRequest" }, { request }],
+    [Friending.sendRequest, {}, { request: reqId }],
+  ),
+  then: actions([Requesting.respond, { request, requestId: reqId }]),
+});
+
+export const SendFriendRequestApiError: Sync = ({ request, error }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Friending/sendRequest" }, { request }],
+    [Friending.sendRequest, {}, { error }],
+  ),
+  then: actions([Requesting.respond, { request, error }]),
+});
+
+// Friending: acceptRequest (API)
+export const AcceptFriendRequestApiRequest: Sync = (
+  { request, session, sender, receiver },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Friending/acceptRequest", session, sender, receiver },
+    { request },
+  ]),
+  // authenticate receiver via session; sender provided explicitly
+  where: async (frames) => {
+    return await frames.query(SessionLogging._getUser, { session }, {
+      receiver,
+    });
+  },
+  then: actions([Friending.acceptRequest, { sender, receiver }]),
+});
+
+export const AcceptFriendRequestApiResponse: Sync = ({ request }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Friending/acceptRequest" }, { request }],
+    [Friending.acceptRequest, {}, {}],
+  ),
+  then: actions([Requesting.respond, { request, status: "success" }]),
+});
+
+export const AcceptFriendRequestApiError: Sync = ({ request, error }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Friending/acceptRequest" }, { request }],
+    [Friending.acceptRequest, {}, { error }],
+  ),
+  then: actions([Requesting.respond, { request, error }]),
+});
+
+// Friending: denyRequest (API)
+export const DenyFriendRequestApiRequest: Sync = (
+  { request, session, sender, receiver },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Friending/denyRequest", session, sender, receiver },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(SessionLogging._getUser, { session }, {
+      receiver,
+    });
+  },
+  then: actions([Friending.denyRequest, { sender, receiver }]),
+});
+
+export const DenyFriendRequestApiResponse: Sync = ({ request }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Friending/denyRequest" }, { request }],
+    [Friending.denyRequest, {}, {}],
+  ),
+  then: actions([Requesting.respond, { request, status: "success" }]),
+});
+
+export const DenyFriendRequestApiError: Sync = ({ request, error }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Friending/denyRequest" }, { request }],
+    [Friending.denyRequest, {}, { error }],
+  ),
+  then: actions([Requesting.respond, { request, error }]),
+});
+
+// Friending: removeFriend (API)
+export const RemoveFriendApiRequest: Sync = (
+  { request, session, user, to_be_removed_friend },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Friending/removeFriend", session, to_be_removed_friend },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(SessionLogging._getUser, { session }, { user });
+  },
+  then: actions([Friending.removeFriend, { user, to_be_removed_friend }]),
+});
+
+export const RemoveFriendApiResponse: Sync = ({ request }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Friending/removeFriend" }, { request }],
+    [Friending.removeFriend, {}, {}],
+  ),
+  then: actions([Requesting.respond, { request, status: "success" }]),
+});
+
+export const RemoveFriendApiError: Sync = ({ request, error }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Friending/removeFriend" }, { request }],
+    [Friending.removeFriend, {}, { error }],
+  ),
+  then: actions([Requesting.respond, { request, error }]),
+});
+
+// Friending: _isFriends (API)
+export const IsFriendsApiRequest: Sync = (
+  { request, session, user1, user2, areFriends },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Friending/_isFriends", session, user1, user2 },
+    { request },
+  ]),
+  where: async (frames) => {
+    // authenticate; optional gating, we just ensure session is valid
+    frames = await frames.query(SessionLogging._getUser, { session }, {});
+    if (frames.length === 0) return frames;
+    return await frames.query(
+      async ({ user1: u1, user2: u2 }) => {
+        const res = await Friending._isFriends({
+          user1: u1 as ID,
+          user2: u2 as ID,
+        });
+        return [{ areFriends: res.areFriends }];
+      },
+      { user1, user2 },
+      { areFriends },
+    );
+  },
+  then: actions([Requesting.respond, { request, areFriends }]),
+});
+
+// Friending: _getSentFriendRequests (API)
+export const GetSentFriendRequestsApiRequest: Sync = (
+  { request, session, sender, sentRequests },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Friending/_getSentFriendRequests", session },
+    { request },
+  ]),
+  where: async (frames) => {
+    frames = await frames.query(SessionLogging._getUser, { session }, {
+      sender,
+    });
+    if (frames.length === 0) return frames;
+    return await frames.query(
+      async ({ sender: s }) => {
+        const res = await Friending._getSentFriendRequests({ sender: s as ID });
+        return [{ sentRequests: res.sentRequests }];
+      },
+      { sender },
+      { sentRequests },
+    );
+  },
+  then: actions([Requesting.respond, { request, sentRequests }]),
+});
+
+// Friending: _getReceivedFriendRequests (API)
+export const GetReceivedFriendRequestsApiRequest: Sync = (
+  { request, session, receiver, receivedRequests },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Friending/_getReceivedFriendRequests", session },
+    { request },
+  ]),
+  where: async (frames) => {
+    frames = await frames.query(SessionLogging._getUser, { session }, {
+      receiver,
+    });
+    if (frames.length === 0) return frames;
+    return await frames.query(
+      async ({ receiver: r }) => {
+        const res = await Friending._getReceivedFriendRequests({
+          receiver: r as ID,
+        });
+        return [{ receivedRequests: res.receivedRequests }];
+      },
+      { receiver },
+      { receivedRequests },
+    );
+  },
+  then: actions([Requesting.respond, { request, receivedRequests }]),
+});
+
+// Friending: getCanonicalFriendPair (API) - helper exposure (optional)
+export const GetCanonicalFriendPairApiRequest: Sync = (
+  { request, session, user1, user2, friend1, friend2 },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Friending/getCanonicalFriendPair", session, user1, user2 },
+    { request },
+  ]),
+  where: async (frames) => {
+    frames = await frames.query(SessionLogging._getUser, { session }, {});
+    if (frames.length === 0) return frames;
+    return await frames.query(
+      ({ user1: u1, user2: u2 }) => {
+        const pair = (u1 as ID) < (u2 as ID)
+          ? { friend1: u1 as ID, friend2: u2 as ID }
+          : { friend1: u2 as ID, friend2: u1 as ID };
+        return [{ friend1: pair.friend1, friend2: pair.friend2 }];
+      },
+      { user1, user2 },
+      { friend1, friend2 },
+    );
+  },
+  then: actions([Requesting.respond, { request, friend1, friend2 }]),
+});
+
+// --- Posting queries (API) ---
+export const GetPostByIdApiRequest: Sync = (
+  { request, post, postDetails, error },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Posting/_getPostById", post },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(
+      async ({ post: p }) => {
+        const res = await Posting._getPostById({ post: p as ID });
+        return [{ postDetails: res.postDetails ?? [], error: res.error }];
+      },
+      { post },
+      { postDetails, error },
+    );
+  },
+  then: actions([Requesting.respond, { request, postDetails, error }]),
+});
+
+export const GetPostsByAuthorApiRequest: Sync = (
+  { request, user, posts },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Posting/_getPostsByAuthor", user },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(
+      async ({ user: u }) => {
+        const res = await Posting._getPostsByAuthor({ user: u as ID });
+        return [{ posts: res.posts }];
+      },
+      { user },
+      { posts },
+    );
+  },
+  then: actions([Requesting.respond, { request, posts }]),
+});
+
+// --- Commenting queries (API) ---
+export const GetCommentApiRequest: Sync = (
+  { request, comment, comments, error },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Commenting/_getComment", comment },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(
+      async ({ comment: c }) => {
+        const res = await Commenting._getComment({ comment: c as ID });
+        if ("comments" in res) return [{ comments: res.comments }];
+        return [{ comments: [], error: (res as { error: string }).error }];
+      },
+      { comment },
+      { comments, error },
+    );
+  },
+  then: actions([Requesting.respond, { request, comments, error }]),
+});
+
+export const GetCommentsForPostApiRequest: Sync = (
+  { request, post, comments },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Commenting/_getCommentsForPost", post },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(
+      async ({ post: p }) => {
+        const res = await Commenting._getCommentsForPost({ post: p as ID });
+        return [{ comments: res.comments }];
+      },
+      { post },
+      { comments },
+    );
+  },
+  then: actions([Requesting.respond, { request, comments }]),
+});
+
+export const GetCommentsByAuthorApiRequest: Sync = (
+  { request, author, comments },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/Commenting/_getCommentsByAuthor", author },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(
+      async ({ author: a }) => {
+        const res = await Commenting._getCommentsByAuthor({ author: a as ID });
+        return [{ comments: res.comments }];
+      },
+      { author },
+      { comments },
+    );
+  },
+  then: actions([Requesting.respond, { request, comments }]),
+});
+
+// --- File queries/actions (API) ---
+export const GetViewUrlApiRequest: Sync = (
+  { request, session, user, object, expiresInSeconds, url, error },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/File/getViewUrl", session, object, expiresInSeconds },
+    { request },
+  ]),
+  where: async (frames) => {
+    // authenticate session -> user id
+    frames = await frames.query(SessionLogging._getUser, { session }, { user });
+    if (frames.length === 0) return frames;
+    return await frames.query(
+      async ({ user: u, object: o, expiresInSeconds: e }) => {
+        const res = await File.getViewUrl({
+          user: u as ID,
+          object: o as string,
+          expiresInSeconds: e as number | undefined,
+        });
+        if ("url" in res) return [{ url: res.url }];
+        return [{ error: (res as { error: string }).error }];
+      },
+      { user, object, expiresInSeconds },
+      { url, error },
+    );
+  },
+  then: actions([Requesting.respond, { request, url, error }]),
+});
+
+export const GetFileByIdApiRequest: Sync = (
+  { request, file, fileDoc },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/File/_getFileById", file },
+    { request },
+  ]),
+  where: async (frames) => {
+    return await frames.query(
+      async ({ file: f }) => {
+        const res = await File._getFileById({ file: f as ID });
+        return [{ fileDoc: res.file }];
+      },
+      { file },
+      { fileDoc },
+    );
+  },
+  then: actions([Requesting.respond, { request, file: fileDoc }]),
+});
+
 // Friending: _getSentFriendRequests (expects { sender })
 export const GetSentFriendRequestsPlain: Sync = (
   { request, sender, sentRequests },

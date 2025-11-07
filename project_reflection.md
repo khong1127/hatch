@@ -12,6 +12,8 @@ I would say that the last part of implementing syncs was a bit more difficult th
 
 2) I was unfortunately sick during the timeframe of this assignment, so I had very limited energy and time to spare. I did use a slack extension, but I chose not to get an extra S^3 extension given how team project deadlines are already stacking up (for which we cannot use extensions on), and I had fallen rather behind on my other classes too. Had I not been sick, I feel that I would have been able to refine the final loose ends of this project better.
 
+3) I would find discrepancies in what code worked in localhost and what worked on Render. After having spent a lot of time refining code so that my app looked as I intended in localhost, I was looking forward to seeing the final deployed product on Render only to be met with a bunch of errors again.
+
 ## Skills
 
 I definitely learned a lot about how to think from a consumer's perspective. I remember that during my internship, a big concept was about "working backwards," which was about structuring work around what is actually helpful and desired by the consumer; I think this project has equipped me with good tips on how to properly execute that. 
