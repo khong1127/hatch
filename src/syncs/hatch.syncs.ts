@@ -1144,6 +1144,42 @@ export const CreatePostApiError: Sync = ({ request, error }) => ({
   then: actions([Requesting.respond, { request, error }]),
 });
 
+// --- PasswordAuthentication: authenticate (API) ---
+export const AuthenticateUserApiRequest: Sync = (
+  { request, username, password },
+) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/api/PasswordAuthentication/authenticate", username, password },
+    { request },
+  ]),
+  then: actions([PasswordAuthentication.authenticate, { username, password }]),
+});
+
+export const AuthenticateUserApiResponse: Sync = ({ request, user }) => ({
+  when: actions(
+    [
+      Requesting.request,
+      { path: "/api/PasswordAuthentication/authenticate" },
+      { request },
+    ],
+    [PasswordAuthentication.authenticate, {}, { user }],
+  ),
+  then: actions([Requesting.respond, { request, user }]),
+});
+
+export const AuthenticateUserApiError: Sync = ({ request, error }) => ({
+  when: actions(
+    [
+      Requesting.request,
+      { path: "/api/PasswordAuthentication/authenticate" },
+      { request },
+    ],
+    [PasswordAuthentication.authenticate, {}, { error }],
+  ),
+  then: actions([Requesting.respond, { request, error }]),
+});
+
 // --- Posting: edit (API) ---
 export const EditPostApiRequest: Sync = (
   { request, session, user, post, new_caption },
