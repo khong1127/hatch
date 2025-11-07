@@ -10,7 +10,7 @@ I would say that the last part of implementing syncs was a bit more difficult th
 
 1) It required rewriting pieces of code that the LLM wasn't always the best at doing. I would find that the written syncs would sometimes use an action with completely wrong parameters, or the LLM simply would say that it could not refactor my code given how the legacy code was structured. The amount of back and forth that I had to do could be rather frustrating.
 
-2) I was unfortunately sick during the timeframe of this assignment, so I had very limited energy and time to spare. I did use a slack extension, but I chose not to get an extra S^3 extension given how team project deadlines are already stacking up (for which we cannot use extensions on), and I had fallen rather behind on my other classes too. Had I not been sick, I feel that I would have been able to refine the final loose ends of this project better.
+2) I was unfortunately sick during the timeframe of this assignment, so I had very limited energy and time to spare. Even with extensions, I feel like sync writing could have gone much more smoothly if I didn't feel rushed to complete it (as I have fallen quite behind in academics in general).
 
 3) I would find discrepancies in what code worked in localhost and what worked on Render. After having spent a lot of time refining code so that my app looked as I intended in localhost, I was looking forward to seeing the final deployed product on Render only to be met with a bunch of errors again.
 

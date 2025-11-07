@@ -1405,6 +1405,28 @@ export const GetFriendsApiRequest: Sync = (
   then: actions([Requesting.respond, { request, friends }]),
 });
 
+// Friending: _getFriends (API variant - direct user id, no session)
+export const GetFriendsApiDirectRequest: Sync = (
+  { request, user, friends },
+) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Friending/_getFriends", user }, {
+      request,
+    }],
+  ),
+  where: async (frames) => {
+    return await frames.query(
+      async ({ user: u }) => {
+        const res = await Friending._getFriends({ user: u as ID });
+        return [{ friends: res.friends }];
+      },
+      { user },
+      { friends },
+    );
+  },
+  then: actions([Requesting.respond, { request, friends }]),
+});
+
 // Friending: sendRequest (API) - session authenticates sender
 export const SendFriendRequestApiRequest: Sync = (
   { request, session, sender, receiver },
@@ -1591,6 +1613,30 @@ export const GetSentFriendRequestsApiRequest: Sync = (
   then: actions([Requesting.respond, { request, sentRequests }]),
 });
 
+// Friending: _getSentFriendRequests (API direct user id)
+export const GetSentFriendRequestsApiDirectRequest: Sync = (
+  { request, sender, sentRequests },
+) => ({
+  when: actions(
+    [
+      Requesting.request,
+      { path: "/api/Friending/_getSentFriendRequests", sender },
+      { request },
+    ],
+  ),
+  where: async (frames) => {
+    return await frames.query(
+      async ({ sender: s }) => {
+        const res = await Friending._getSentFriendRequests({ sender: s as ID });
+        return [{ sentRequests: res.sentRequests }];
+      },
+      { sender },
+      { sentRequests },
+    );
+  },
+  then: actions([Requesting.respond, { request, sentRequests }]),
+});
+
 // Friending: _getReceivedFriendRequests (API)
 export const GetReceivedFriendRequestsApiRequest: Sync = (
   { request, session, receiver, receivedRequests },
@@ -1605,6 +1651,32 @@ export const GetReceivedFriendRequestsApiRequest: Sync = (
       receiver,
     });
     if (frames.length === 0) return frames;
+    return await frames.query(
+      async ({ receiver: r }) => {
+        const res = await Friending._getReceivedFriendRequests({
+          receiver: r as ID,
+        });
+        return [{ receivedRequests: res.receivedRequests }];
+      },
+      { receiver },
+      { receivedRequests },
+    );
+  },
+  then: actions([Requesting.respond, { request, receivedRequests }]),
+});
+
+// Friending: _getReceivedFriendRequests (API direct user id)
+export const GetReceivedFriendRequestsApiDirectRequest: Sync = (
+  { request, receiver, receivedRequests },
+) => ({
+  when: actions(
+    [
+      Requesting.request,
+      { path: "/api/Friending/_getReceivedFriendRequests", receiver },
+      { request },
+    ],
+  ),
+  where: async (frames) => {
     return await frames.query(
       async ({ receiver: r }) => {
         const res = await Friending._getReceivedFriendRequests({
@@ -2032,6 +2104,26 @@ export const GetFeedForUserPlain: Sync = ({ request, user, posts }) => ({
   then: actions([Requesting.respond, { request, posts }]),
 });
 
+// Posting: getFeedForUser (API variant) minimal feed (own posts)
+export const GetFeedForUserApiRequest: Sync = ({ request, user, posts }) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Posting/getFeedForUser", user }, {
+      request,
+    }],
+  ),
+  where: async (frames) => {
+    return await frames.query(
+      async ({ user: u }) => {
+        const { posts } = await Posting._getPostsByAuthor({ user: u as ID });
+        return [{ posts: Array.isArray(posts) ? posts : [] }];
+      },
+      { user },
+      { posts },
+    );
+  },
+  then: actions([Requesting.respond, { request, posts }]),
+});
+
 // Posting: _getPostsByAuthor using session (derive user from session)
 export const GetMyPostsPlain: Sync = (
   { request, session, user, posts },
@@ -2076,6 +2168,30 @@ export const GetFeedForUserBySessionPlain: Sync = (
         const { posts } = await Posting._getPostsByAuthor({ user: u });
         const safePosts = Array.isArray(posts) ? posts : [];
         return [{ posts: safePosts }];
+      },
+      { user },
+      { posts },
+    );
+  },
+  then: actions([Requesting.respond, { request, posts }]),
+});
+
+// Posting: getFeedForUser (API) using session
+export const GetFeedForUserBySessionApiRequest: Sync = (
+  { request, session, user, posts },
+) => ({
+  when: actions(
+    [Requesting.request, { path: "/api/Posting/getFeedForUser", session }, {
+      request,
+    }],
+  ),
+  where: async (frames) => {
+    frames = await frames.query(SessionLogging._getUser, { session }, { user });
+    if (frames.length === 0) return frames;
+    return await frames.query(
+      async ({ user: u }) => {
+        const { posts } = await Posting._getPostsByAuthor({ user: u });
+        return [{ posts: Array.isArray(posts) ? posts : [] }];
       },
       { user },
       { posts },
