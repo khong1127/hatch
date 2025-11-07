@@ -207,7 +207,57 @@ export class SyncConcept {
       if (this.logging === Logging.VERBOSE) {
         console.log(`${sync.sync}: THEN ${thenAction}`, thenRecord);
       }
+      // Temporary debug logging: announce execution of the `then` action,
+      // and specially mark Requesting.respond calls so we can trace responses.
+      try {
+        const thenConceptName = (((thenAction as unknown) as {
+          concept?: { constructor?: { name?: string } };
+        })
+          .concept?.constructor?.name) || "<unknown>";
+        const thenActionName =
+          (((thenAction as unknown) as { action?: { name?: string } }).action
+            ?.name) ||
+          ((thenAction as unknown) as { name?: string }).name || "<anonymous>";
+        if (this.logging !== Logging.OFF) {
+          console.log(
+            `Executing THEN -> ${sync.sync}: ${thenConceptName}.${thenActionName}`,
+            thenRecord,
+          );
+        }
+        if (
+          thenConceptName === "RequestingConcept" &&
+          thenActionName === "respond"
+        ) {
+          // show the request id we will be responding to
+          const maybeReq =
+            ((thenRecord as unknown) as { request?: unknown }).request;
+          console.log(
+            `*** Requesting.respond detected - responding to request: ${
+              String(maybeReq)
+            }`,
+          );
+        }
+      } catch {
+        // ignore logging errors
+      }
       await thenAction(thenRecord);
+      try {
+        const thenConceptName = (((thenAction as unknown) as {
+          concept?: { constructor?: { name?: string } };
+        })
+          .concept?.constructor?.name) || "<unknown>";
+        const thenActionName =
+          (((thenAction as unknown) as { action?: { name?: string } }).action
+            ?.name) ||
+          ((thenAction as unknown) as { name?: string }).name || "<anonymous>";
+        if (this.logging !== Logging.OFF) {
+          console.log(
+            `Completed THEN -> ${sync.sync}: ${thenConceptName}.${thenActionName}`,
+          );
+        }
+      } catch {
+        // ignore logging errors
+      }
     }
   }
   matchThen(then: ActionPattern, frame: Frame) {

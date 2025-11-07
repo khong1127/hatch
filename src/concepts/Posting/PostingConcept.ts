@@ -203,6 +203,14 @@ export default class PostingConcept {
     }
   }
 
+  /** Adapter for syncs: return an array of post documents directly for Frames.query
+   *  signature: ({ post }) => PostDocument[]
+   */
+  async _getPostByIdForSync(input: { post: Post }): Promise<PostDocument[]> {
+    const res = await this._getPostById({ post: input.post });
+    return res.postDetails ?? [];
+  }
+
   /**
    * query: _getPostsByAuthor (user: User): (posts: PostDocument[])
    *

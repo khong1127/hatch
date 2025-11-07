@@ -231,4 +231,17 @@ export default class SessionLoggingConcept {
     const foundSession = await this.sessions.findOne({ _id: session });
     return foundSession ? [foundSession.active] : [];
   }
+
+  /**
+   * _getUser (session: Session): (user: User[])
+   *
+   * Adapter used by syncs: given a session id, return an array of objects
+   * with the `user` key so it can be used with Frames.query(..., { user }).
+   */
+  async _getUser(input: { session: Session }): Promise<{ user: User }[]> {
+    const { session } = input;
+    const foundSession = await this.sessions.findOne({ _id: session });
+    if (!foundSession) return [];
+    return [{ user: foundSession.owner }];
+  }
 }

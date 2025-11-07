@@ -1,60 +1,42 @@
 [@api-extraction](api-extraction-from-code.md)
 
-# prompt: Please extract an API for the following concept:
+# prompt: Please update the API for the following concept based on the changes that have been made: Friending
 
-## File
+Current API spec:
 
-Code:
+# API Specification: SessionLogging Concept
 
-[@FileConcept.ts](../../src/concepts/File/FileConcept.ts)
-# response:
-
-# API Specification: File Concept
-
-**Purpose:** Manage user-owned files, supporting secure upload, storage, and retrieval of content.
+**Purpose:** capture photo records of a user's activity during a trip session
 
 ---
 
 ## API Endpoints
 
-### POST /api/File/requestUploadUrl
+### POST /api/SessionLogging/startSession
 
-**Description:** Requests a time-limited, signed URL for securely uploading a file to cloud storage.
+**Description:** Creates a new session (active = true) under the specified user.
 
 **Requirements:**
-
-*   `user` ID must be provided.
-*   `filename` must be provided.
-*   The `GCS_BUCKET` environment variable must be set on the server.
+- user to exist (as a valid ID in the system context)
 
 **Effects:**
-
-*   Generates a new, time-limited, signed PUT URL valid for uploading a file to the configured cloud storage bucket.
-*   Returns the `uploadUrl`, the target `bucket` name, and the generated `object` path for the file.
+- creates a new session (active = true) under the specified user, returning the ID of the new session.
 
 **Request Body:**
-
 ```json
 {
-  "user": "string",
-  "filename": "string",
-  "contentType": "string",
-  "expiresInSeconds": "number"
+  "user": "string"
 }
 ```
 
 **Success Response Body (Action):**
-
 ```json
 {
-  "uploadUrl": "string",
-  "bucket": "string",
-  "object": "string"
+  "session": "string"
 }
 ```
 
 **Error Response Body:**
-
 ```json
 {
   "error": "string"
@@ -63,43 +45,36 @@ Code:
 
 ---
 
-### POST /api/File/confirmUpload
+### POST /api/SessionLogging/addEntry
 
-**Description:** Confirms a successful file upload by recording its metadata in the system.
+**Description:** Adds the specified image to the set of images associated with an active session owned by the user.
 
 **Requirements:**
-
-*   `user` ID must be provided.
-*   `object` path (from `requestUploadUrl`) must be provided.
-*   The `GCS_BUCKET` environment variable must be set on the server.
+- user to exist
+- session must exist
+- image must exist (as a valid ID)
+- session must be active
+- session must belong to the user
+- The image must not already be associated with the session.
 
 **Effects:**
-
-*   Creates a new `FileId` and stores a new file document in the database, associating it with the `user`, `bucket`, `object` path, `contentType`, `size`, and `createdAt` timestamp.
-*   Returns the newly created `file` ID and a direct public `url` to the stored file.
+- adds the specified image to the set of images associated with the session.
 
 **Request Body:**
-
 ```json
 {
   "user": "string",
-  "object": "string",
-  "contentType": "string",
-  "size": "number"
+  "session": "string",
+  "image": "string"
 }
 ```
 
 **Success Response Body (Action):**
-
 ```json
-{
-  "file": "string",
-  "url": "string"
-}
+{}
 ```
 
 **Error Response Body:**
-
 ```json
 {
   "error": "string"
@@ -108,42 +83,33 @@ Code:
 
 ---
 
-### POST /api/File/getViewUrl
+### POST /api/SessionLogging/endSession
 
-**Description:** Provides a time-limited, signed URL for securely viewing an existing file.
+**Description:** Sets the 'active' flag of the specified session to false.
 
 **Requirements:**
-
-*   `user` ID must be provided.
-*   `object` path must be provided.
-*   The `GCS_BUCKET` environment variable must be set on the server.
+- user to exist
+- session must exist
+- session must belong to the user
+- Session must be active
 
 **Effects:**
-
-*   Generates a new, time-limited, signed GET URL for the specified `object` in the configured cloud storage bucket.
-*   Returns the generated `url` for viewing the file.
-*   *Note: This action does not perform access control; it assumes the caller is authorized to view the file.*
+- sets the 'active' flag of the specified session to false.
 
 **Request Body:**
-
 ```json
 {
   "user": "string",
-  "object": "string",
-  "expiresInSeconds": "number"
+  "session": "string"
 }
 ```
 
 **Success Response Body (Action):**
-
 ```json
-{
-  "url": "string"
-}
+{}
 ```
 
 **Error Response Body:**
-
 ```json
 {
   "error": "string"
@@ -152,70 +118,17 @@ Code:
 
 ---
 
-### POST /api/File/_getFileById
+### POST /api/SessionLogging/_getSessionsByUser
 
-**Description:** Retrieves the metadata for a specific file by its unique ID.
-
-**Requirements:**
-
-*   `file` ID must be provided.
-
-**Effects:**
-
-*   Returns an array containing a single object, where the `file` key holds the `FileDocument` metadata if found.
-*   Returns an empty array if no file with the given ID exists.
-
-**Request Body:**
-
-```json
-{
-  "file": "string"
-}
-```
-
-**Success Response Body (Query):**
-
-```json
-[
-  {
-    "file": {
-      "_id": "string",
-      "owner": "string",
-      "bucket": "string",
-      "object": "string",
-      "contentType": "string",
-      "size": "number",
-      "createdAt": "string"
-    }
-  }
-]
-```
-
-**Error Response Body:**
-
-```json
-{
-  "error": "string"
-}
-```
-
----
-
-### POST /api/File/_getFilesByOwner
-
-**Description:** Retrieves a list of all file metadata documents owned by a specific user.
+**Description:** Returns a list of IDs for all sessions owned by the given user.
 
 **Requirements:**
-
-*   `user` ID must be provided.
+- (Implicit: user ID must be provided)
 
 **Effects:**
-
-*   Returns an array containing a single object. This object has a `files` key, whose value is an array of `FileDocument`s associated with the given `user`, sorted by creation date (newest first).
-*   Returns an array containing a single object with an empty `files` array if the user has no files.
+- Returns a list of IDs for all sessions owned by the given user.
 
 **Request Body:**
-
 ```json
 {
   "user": "string"
@@ -223,41 +136,382 @@ Code:
 ```
 
 **Success Response Body (Query):**
-
 ```json
 [
   {
-    "files": [
-      {
-        "_id": "string",
-        "owner": "string",
-        "bucket": "string",
-        "object": "string",
-        "contentType": "string",
-        "size": "number",
-        "createdAt": "string"
-      },
-      {
-        "_id": "string",
-        "owner": "string",
-        "bucket": "string",
-        "object": "string",
-        "contentType": "string",
-        "size": "number",
-        "createdAt": "string"
-      }
-      // ... more FileDocument objects
-    ]
+    "sessions": "string"
   }
 ]
 ```
 
 **Error Response Body:**
-
 ```json
 {
   "error": "string"
 }
 ```
 
+---
+
+### POST /api/SessionLogging/_getSessionDetails
+
+**Description:** Returns the full details of a specific session, or an empty array if not found.
+
+**Requirements:**
+- (Implicit: session ID must be provided)
+
+**Effects:**
+- Returns an array containing the full details of a specific session, or an empty array if not found.
+
+**Request Body:**
+```json
+{
+  "session": "string"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  {
+    "details": {
+      "_id": "string",
+      "owner": "string",
+      "images": [
+        "string"
+      ],
+      "active": "boolean"
+    }
+  }
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+
+---
+
+### POST /api/SessionLogging/_getEntriesInSession
+
+**Description:** Returns the list of image entry IDs for a given session.
+
+**Requirements:**
+- (Implicit: session ID must be provided)
+
+**Effects:**
+- Returns the list of image entry IDs for a given session.
+
+**Request Body:**
+```json
+{
+  "session": "string"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  {
+    "images": "string"
+  }
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+
+---
+
+### POST /api/SessionLogging/_isSessionActive
+
+**Description:** Returns whether the specified session is active.
+
+**Requirements:**
+- (Implicit: session ID must be provided)
+
+**Effects:**
+- Returns an array containing a single boolean (true if the session is active, false if inactive) or an empty array if the session is not found.
+
+**Request Body:**
+```json
+{
+  "session": "string"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  {
+    "active": "boolean"
+  }
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
+
+Code:
+[@SessionLoggingConcept.ts](../../src/concepts/SessionLogging/SessionLoggingConcept.ts)
+
+# response:
+
+Based on my analysis of the concept implementation, here is the updated API specification.
+
+# API Specification: SessionLogging Concept
+
+**Purpose:** capture photo records of a user's activity during a trip session
+
+---
+
+## API Endpoints
+
+### POST /api/SessionLogging/startSession
+
+**Description:** Creates a new, active session for the specified user.
+
+**Requirements:**
+- The provided `user` must exist.
+
+**Effects:**
+- Creates a new session associated with the `user`.
+- The new session is marked as `active`.
+- Returns the unique ID of the newly created session.
+
+**Request Body:**
+```json
+{
+  "user": "string"
+}
+```
+
+**Success Response Body (Action):**
+```json
+{
+  "session": "string"
+}
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
+### POST /api/SessionLogging/addEntry
+
+**Description:** Adds an image to an active session owned by the user.
+
+**Requirements:**
+- The `user`, `session`, and `image` must all exist.
+- The session must be `active`.
+- The session must be owned by the `user`.
+- The image must not already be in the session's image set.
+
+**Effects:**
+- Adds the `image` ID to the set of images for the specified `session`.
+
+**Request Body:**
+```json
+{
+  "user": "string",
+  "session": "string",
+  "image": "string"
+}
+```
+
+**Success Response Body (Action):**
+```json
+{}
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
+### POST /api/SessionLogging/endSession
+
+**Description:** Deactivates a session, preventing new entries from being added.
+
+**Requirements:**
+- The `user` and `session` must exist.
+- The session must be owned by the `user`.
+- The session must currently be `active`.
+
+**Effects:**
+- Sets the `active` status of the session to `false`.
+
+**Request Body:**
+```json
+{
+  "user": "string",
+  "session": "string"
+}
+```
+
+**Success Response Body (Action):**
+```json
+{}
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
+### POST /api/SessionLogging/_getSessionsByUser
+
+**Description:** Retrieves all session IDs owned by a specific user.
+
+**Requirements:**
+- A valid `user` ID must be provided.
+
+**Effects:**
+- Returns a list of objects, each containing a session ID owned by the user.
+
+**Request Body:**
+```json
+{
+  "user": "string"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  {
+    "session": "string"
+  }
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
+### POST /api/SessionLogging/_getSessionDetails
+
+**Description:** Retrieves the complete details for a specific session.
+
+**Requirements:**
+- A valid `session` ID must be provided.
+
+**Effects:**
+- Returns an array containing a single object with the session's details, or an empty array if not found.
+
+**Request Body:**
+```json
+{
+  "session": "string"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  {
+    "_id": "string",
+    "owner": "string",
+    "images": [
+      "string"
+    ],
+    "active": "boolean"
+  }
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
+### POST /api/SessionLogging/_getEntriesInSession
+
+**Description:** Retrieves all image IDs associated with a specific session.
+
+**Requirements:**
+- A valid `session` ID must be provided.
+
+**Effects:**
+- Returns a list of objects, each containing an image ID from the session.
+
+**Request Body:**
+```json
+{
+  "session": "string"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  {
+    "image": "string"
+  }
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
+### POST /api/SessionLogging/_isSessionActive
+
+**Description:** Checks if a specific session is currently active.
+
+**Requirements:**
+- A valid `session` ID must be provided.
+
+**Effects:**
+- Returns an array containing a single object with the session's active status, or an empty array if not found.
+
+**Request Body:**
+```json
+{
+  "session": "string"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  {
+    "active": "boolean"
+  }
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
 ---

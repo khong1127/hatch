@@ -161,6 +161,14 @@ export default class FileConcept {
     return { file: found ?? undefined };
   }
 
+  /** Adapter for syncs: return file document array directly for Frames.query
+   * signature: ({ file }) => FileDocument[]
+   */
+  async _getFileByIdForSync(input: { file: FileId }): Promise<FileDocument[]> {
+    const r = await this._getFileById({ file: input.file });
+    return r.file ? [r.file] : [];
+  }
+
   async _getFilesByOwner(
     input: { user: User },
   ): Promise<{ files: FileDocument[] }> {

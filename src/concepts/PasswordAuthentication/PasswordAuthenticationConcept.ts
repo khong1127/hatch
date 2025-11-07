@@ -1,5 +1,5 @@
 import { Collection, Db } from "npm:mongodb";
-import { Empty, ID } from "@utils/types.ts";
+import { ID } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
 
 /**
@@ -91,10 +91,21 @@ export default class PasswordAuthenticationConcept {
    * @effects returns an array containing the user document if found, otherwise an empty array.
    */
   async _getUserByUsername(
-    username: string,
+    usernameOrInput: string | { username: string },
   ): Promise<UserDocument[]> {
+    const username = typeof usernameOrInput === "string"
+      ? usernameOrInput
+      : usernameOrInput.username;
     const user = await this.users.findOne({ username: username });
     return user ? [user] : []; // Wrap the found user in an array, or return an empty array
+  }
+
+  /** Adapter for syncs: returns both the user document and its id so syncs can bind to both */
+  async _getUserByUsernameForSync(
+    input: { username: string },
+  ): Promise<{ toUser: UserDocument; toUserId: User }[]> {
+    const users = await this._getUserByUsername(input);
+    return users.map((u) => ({ toUser: u, toUserId: u._id }));
   }
 
   /**

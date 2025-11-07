@@ -175,15 +175,42 @@ export default class FriendingConcept {
   async removeFriend(
     { user, to_be_removed_friend }: { user: User; to_be_removed_friend: User },
   ): Promise<Empty | { error: string }> {
+    console.log(
+      `[Friending.removeFriend] Called with user=${user}, to_be_removed_friend=${to_be_removed_friend}`,
+    );
+    console.log(
+      `[Friending.removeFriend] Types: user=${typeof user}, to_be_removed_friend=${typeof to_be_removed_friend}`,
+    );
+
+    // First let's check what friendships exist for these users
+    const allFriendships = await this.friendships.find({
+      $or: [
+        { friend1: user },
+        { friend2: user },
+        { friend1: to_be_removed_friend },
+        { friend2: to_be_removed_friend },
+      ],
+    }).toArray();
+    console.log(
+      `[Friending.removeFriend] All friendships involving these users:`,
+      JSON.stringify(allFriendships, null, 2),
+    );
+
     // Requires: friendship between user and to_be_removed_friend must exist
     const { friend1, friend2 } = this.getCanonicalFriendPair(
       user,
       to_be_removed_friend,
     );
+    console.log(
+      `[Friending.removeFriend] Canonical pair: friend1=${friend1}, friend2=${friend2}`,
+    );
+
     const friendship = await this.friendships.findOne({
       friend1: friend1,
       friend2: friend2,
     });
+    console.log(`[Friending.removeFriend] Friendship found:`, friendship);
+
     if (!friendship) {
       return { error: "Friendship does not exist." };
     }
@@ -223,12 +250,21 @@ export default class FriendingConcept {
   async _getFriends(
     { user }: { user: User },
   ): Promise<{ friends: User[] }> {
+    console.log(
+      `[Friending._getFriends] Called with user=${user}, type=${typeof user}`,
+    );
+
     const friendDocuments = await this.friendships.find({
       $or: [
         { friend1: user },
         { friend2: user },
       ],
     }).toArray();
+
+    console.log(
+      `[Friending._getFriends] Found ${friendDocuments.length} friendships:`,
+      JSON.stringify(friendDocuments, null, 2),
+    );
 
     const friends = friendDocuments.map((doc) =>
       doc.friend1 === user ? doc.friend2 : doc.friend1

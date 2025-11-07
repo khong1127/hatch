@@ -22,7 +22,22 @@ export class ActionConcept {
     this.actions.set(id, actionRecord);
     const partition = this.flowIndex.get(flow) || [];
     this.flowIndex.set(flow, [...partition, actionRecord]);
-    // console.log("Invoke:", actionRecord);
+    // Temporary debug: log action invocation for tracing
+    try {
+      const conceptName =
+        (((actionRecord.concept as unknown) as {
+          constructor?: { name?: string };
+        })
+          .constructor?.name) || "<unknown>";
+      const actionName =
+        (((actionRecord.action as unknown) as { name?: string }).name) ||
+        "<anonymous>";
+      console.log(
+        `Action.invoke -> ${conceptName}.${actionName} id=${actionRecord.id} flow=${flow}`,
+      );
+    } catch {
+      // ignore logging errors
+    }
     return { id };
   }
   invoked({ id, output }: { id: string; output: Record<string, unknown> }) {
@@ -31,7 +46,22 @@ export class ActionConcept {
       throw new Error(`Action with id ${id} not found.`);
     }
     action.output = output;
-    // console.log("Invoked:", output);
+    // Temporary debug: log action completion for tracing
+    try {
+      const conceptName =
+        (((action.concept as unknown) as { constructor?: { name?: string } })
+          .constructor?.name) || "<unknown>";
+      const actionName =
+        (((action.action as unknown) as { name?: string }).name) ||
+        "<anonymous>";
+      console.log(
+        `Action.invoked <- ${conceptName}.${actionName} id=${id} output=${
+          JSON.stringify(output)
+        }`,
+      );
+    } catch {
+      // ignore logging errors
+    }
     return { id };
   }
   _getByFlow(flow: string) {

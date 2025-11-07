@@ -1,4 +1,4 @@
-import { Collection, Db, ObjectId } from "npm:mongodb";
+import { Collection, Db } from "npm:mongodb";
 import { Empty, ID } from "../../utils/types.ts";
 import { freshID } from "../../utils/database.ts";
 
@@ -71,6 +71,9 @@ export default class CommentingConcept {
 
     try {
       await this.comments.insertOne(newComment);
+      console.log(
+        `[Commenting.addComment] Successfully inserted comment ${newCommentId} for post ${post} by author ${author}`,
+      );
       return { comment: newCommentId };
     } catch (e) {
       console.error("Failed to create comment:", e);
@@ -198,6 +201,17 @@ export default class CommentingConcept {
     return { error: `Comment with ID '${comment}' not found.` };
   }
 
+  /** Adapter for syncs: return comments array directly for Frames.query
+   * signature: ({ comment }) => CommentDocument[]
+   */
+  async _getCommentForSync(
+    input: { comment: Comment },
+  ): Promise<CommentDocument[]> {
+    const res = await this._getComment({ comment: input.comment });
+    if ("comments" in res) return res.comments;
+    return [];
+  }
+
   /**
    * _getCommentsForPost (post: Post): (comments: CommentDocument[])
    * Query to retrieve all comments for a given post, sorted from most recent to oldest.
@@ -208,6 +222,9 @@ export default class CommentingConcept {
     const foundComments = await this.comments.find({ post }).sort({
       createdAt: -1,
     }).toArray();
+    console.log(
+      `[Commenting._getCommentsForPost] Fetched ${foundComments.length} comments for post ${post}`,
+    );
     return { comments: foundComments };
   }
 
