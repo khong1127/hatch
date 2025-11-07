@@ -1023,6 +1023,72 @@ export const GetAllUsersResponse: Sync = ({ request, users, error }) => ({
   then: actions([Requesting.respond, { request, users, error }]),
 });
 
+// --- Action: register (API) ---
+// Publicly accessible registration endpoint.
+export const RegisterUserApiRequest: Sync = (
+  { request, username, password },
+) => ({
+  when: actions(
+    [
+      Requesting.request,
+      { path: "/api/PasswordAuthentication/register", username, password },
+      { request },
+    ],
+  ),
+  then: actions([PasswordAuthentication.register, { username, password }]),
+});
+
+export const RegisterUserApiResponse: Sync = ({ request, user }) => ({
+  when: actions(
+    [
+      Requesting.request,
+      { path: "/api/PasswordAuthentication/register" },
+      { request },
+    ],
+    [PasswordAuthentication.register, {}, { user }],
+  ),
+  then: actions([Requesting.respond, { request, user }]),
+});
+
+export const RegisterUserApiError: Sync = ({ request, error }) => ({
+  when: actions(
+    [
+      Requesting.request,
+      { path: "/api/PasswordAuthentication/register" },
+      { request },
+    ],
+    [PasswordAuthentication.register, {}, { error }],
+  ),
+  then: actions([Requesting.respond, { request, error }]),
+});
+
+// --- Query: _userExistsByUsername (API) ---
+// Excluded from passthrough; provide explicit Requesting handlers.
+export const UserExistsByUsernameApi: Sync = (
+  { request, username, exists },
+) => ({
+  when: actions(
+    [
+      Requesting.request,
+      { path: "/api/PasswordAuthentication/_userExistsByUsername", username },
+      { request },
+    ],
+  ),
+  where: async (frames) => {
+    return await frames.query(
+      async ({ username: un }) => {
+        const arr = await PasswordAuthentication._userExistsByUsername({
+          username: un,
+        });
+        return [{ exists: Array.isArray(arr) && arr.length > 0 }];
+      },
+      { username },
+      { exists },
+    );
+  },
+  then: actions([Requesting.respond, { request, exists }]),
+});
+
 // ============================================================================
 // Plain path (no /api base) aliases to respond to current frontend calls
 // ============================================================================

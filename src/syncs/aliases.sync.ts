@@ -23,12 +23,16 @@ export {
   GetReceivedFriendRequestsPlain,
   GetSentFriendRequestsPlain,
   GetUserByUsernamePlain,
+  RegisterUserApiError,
+  RegisterUserApiRequest,
+  RegisterUserApiResponse,
   RemoveFriendPlainError,
   RemoveFriendPlainRequest,
   RemoveFriendPlainResponse,
   SendFriendRequestPlainError,
   SendFriendRequestPlainRequest,
   SendFriendRequestPlainResponse,
+  UserExistsByUsernameApi,
 } from "./hatch.syncs.ts";
 
 // Commenting query/respond aliases (plain path variants)
