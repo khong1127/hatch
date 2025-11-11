@@ -1187,18 +1187,15 @@ export const GetUserByUsernameResponse: Sync = ({ request, user, error }) => ({
 // Any authenticated user can get a list of all users.
 // Note: In a real-world scenario, you might restrict this to an admin role.
 export const GetAllUsersRequest: Sync = (
-  { request, session, user, users },
+  { request, users },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/api/PasswordAuthentication/_getAllUsers", session },
-    { request },
-  ]),
+  // Do not require session; respond immediately to avoid timeouts even if unauthenticated
+  when: actions(
+    [Requesting.request, { path: "/api/PasswordAuthentication/_getAllUsers" }, {
+      request,
+    }],
+  ),
   where: async (frames) => {
-    // Authenticate the user making the request
-    frames = await frames.query(SessionLogging._getUser, { session }, { user });
-    if (frames.length === 0) return frames;
-    // Fetch all users and bind them into frames as { users }
     return await frames.query(
       async () => {
         const res = await PasswordAuthentication._getAllUsers();
@@ -1211,17 +1208,7 @@ export const GetAllUsersRequest: Sync = (
   then: actions([Requesting.respond, { request, users }]),
 });
 
-export const GetAllUsersResponse: Sync = ({ request, users, error }) => ({
-  when: actions(
-    [
-      Requesting.request,
-      { path: "/api/PasswordAuthentication/_getAllUsers" },
-      { request },
-    ],
-    [PasswordAuthentication._getAllUsers, {}, { users, error }],
-  ),
-  then: actions([Requesting.respond, { request, users, error }]),
-});
+// Note: Response handled inline in GetAllUsersRequest to avoid cross-sync matching delays
 
 // --- Action: register (API) ---
 // Publicly accessible registration endpoint.

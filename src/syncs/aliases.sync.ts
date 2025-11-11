@@ -33,7 +33,6 @@ export {
   EditPostPlainResponse,
   GetAllUsersPlain,
   GetAllUsersRequest,
-  GetAllUsersResponse,
   GetCanonicalFriendPairApiRequest,
   GetCommentApiRequest,
   GetCommentsByAuthorApiRequest,
