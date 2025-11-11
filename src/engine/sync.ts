@@ -339,24 +339,63 @@ export class SyncConcept {
         if (
           typeof value === "function" && value.name.startsWith("_")
         ) {
-          // Treat queries similarly to actions for sync registration so they can
-          // appear in `when` / `then` lists. We still avoid full instrumentation
-          // overhead (invocation logging + synchronization) by just binding and
-          // attaching the concept metadata expected by `actions(...)`.
-          let bound = boundActions.get(value) as InstrumentedAction | undefined;
-          if (bound === undefined) {
-            const queryFn = value.bind(concept);
-            if (queryFn === undefined) {
-              throw new Error(`Action ${value} not found.`);
-            }
-            // Attach concept metadata so `actions()` doesn't throw.
-            bound = queryFn as InstrumentedAction;
-            bound.concept = concept;
-            // Preserve original for debugging (not used by engine logic for queries)
-            bound.action = queryFn;
-            boundActions.set(value, bound);
+          // Instrument queries (methods starting with "_") so they participate
+          // in the action flow and can be referenced in `when`/`then` patterns.
+          let instrumented = boundActions.get(value) as
+            | InstrumentedAction
+            | undefined;
+          if (instrumented === undefined) {
+            const query = value.bind(concept);
+            instrumented = async function instrumented(
+              args?: ActionArguments,
+            ) {
+              const base = (args ?? {}) as ActionArguments;
+              let {
+                [flow]: flowToken,
+                [synced]: syncedMap,
+                [actionId]: id,
+                ...input
+              } = base;
+              if (flowToken === undefined) flowToken = uuid();
+              if (typeof flowToken !== "string") {
+                throw new Error("Flow token not string.");
+              }
+              if (syncedMap === undefined) syncedMap = new Map();
+              if (!(syncedMap instanceof Map)) {
+                throw new Error("synced must be a Map.");
+              }
+              if (id === undefined) id = uuid();
+              if (typeof id !== "string") {
+                throw new Error("actionId not string.");
+              }
+              const actionRecord: ActionRecord = {
+                id,
+                // treat instrumented query as a generic Function
+                action: instrumented,
+                concept,
+                input,
+                synced: syncedMap,
+                flow: flowToken,
+              };
+              Action.invoke(actionRecord);
+              const output = await query(input);
+              Action.invoked({ id, output });
+              await synchronize({ ...actionRecord, output });
+              return output;
+            } as InstrumentedAction;
+            instrumented.concept = concept;
+            instrumented.action = query;
+            const instrumentedRepr = () => `${inspect(query)}`;
+            (instrumented as unknown as { toString: () => string }).toString =
+              instrumentedRepr;
+            Object.defineProperty(instrumented, inspect.custom, {
+              value: instrumentedRepr,
+              writable: false,
+              configurable: true,
+            });
+            boundActions.set(value, instrumented);
           }
-          return bound;
+          return instrumented as InstrumentedAction;
         }
         if (
           typeof value === "function" && !value.name.startsWith("_")

@@ -119,6 +119,12 @@ export default class PasswordAuthenticationConcept {
     return user ? [user] : []; // Wrap the found user in an array, or return an empty array
   }
 
+  /** Adapter for syncs: accepts an object to avoid primitive arg instrumentation issues */
+  async _getUserByIdForSync(input: { id: User }): Promise<UserDocument[]> {
+    const { id } = input;
+    return await this._getUserById(id);
+  }
+
   /**
    * Query: _getAllUsers
    * Internal query to retrieve all user documents.

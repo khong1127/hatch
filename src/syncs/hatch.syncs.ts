@@ -63,8 +63,8 @@ export const AddCommentRequest: Sync = (
 
       // Friending stores usernames; convert both ids to usernames before checking friendship
       const [curDocs, authDocs] = await Promise.all([
-        PasswordAuthentication._getUserById(currentUser as ID),
-        PasswordAuthentication._getUserById(postAuthorId as ID),
+        PasswordAuthentication._getUserByIdForSync({ id: currentUser as ID }),
+        PasswordAuthentication._getUserByIdForSync({ id: postAuthorId as ID }),
       ]);
       const curName = (Array.isArray(curDocs) && curDocs[0]?.username) as
         | string
@@ -302,7 +302,7 @@ export const SendFriendRequestPlainError: Sync = (
 // ============================================================================
 
 export const AcceptFriendRequestPlainRequest: Sync = (
-  { request, sender, receiver },
+  { request, sender, receiver, senderResolved, receiverResolved },
 ) => ({
   when: actions(
     [
@@ -311,12 +311,57 @@ export const AcceptFriendRequestPlainRequest: Sync = (
       { request },
     ],
   ),
-  then: actions([Friending.acceptRequest, { sender, receiver }]),
+  // Normalize both sides to match how the pending request was stored.
+  // We consider both representations (ID and username) for each side and pick the pair that actually exists.
+  where: async (frames) => {
+    const looksLikeId = (val: unknown) =>
+      typeof val === "string" && /[0-9a-fA-F]{8}-/.test(val as string);
+    return await frames.query(
+      async ({ sender: s, receiver: r }) => {
+        // Build candidate sets for sender and receiver: raw value and, if ID, its username.
+        const sCandidates: ID[] = [s as ID];
+        if (looksLikeId(s)) {
+          const sDocs = await PasswordAuthentication._getUserByIdForSync({
+            id: s as ID,
+          });
+          const sName = Array.isArray(sDocs) && sDocs[0]?.username;
+          if (sName) sCandidates.push(sName as unknown as ID);
+        }
+        const rCandidates: ID[] = [r as ID];
+        if (looksLikeId(r)) {
+          const rDocs = await PasswordAuthentication._getUserByIdForSync({
+            id: r as ID,
+          });
+          const rName = Array.isArray(rDocs) && rDocs[0]?.username;
+          if (rName) rCandidates.push(rName as unknown as ID);
+        }
+
+        // Try to find a combination that exists using _getReceivedFriendRequests
+        for (const rCand of rCandidates) {
+          const rec = await Friending._getReceivedFriendRequests({
+            receiver: rCand,
+          });
+          const received = new Set((rec.receivedRequests ?? []) as ID[]);
+          for (const sCand of sCandidates) {
+            if (received.has(sCand)) {
+              return [{ senderResolved: sCand, receiverResolved: rCand }];
+            }
+          }
+        }
+        // Fallback: return original values; concept will error and error responder will reply.
+        return [{ senderResolved: s as ID, receiverResolved: r as ID }];
+      },
+      { sender, receiver },
+      { senderResolved, receiverResolved },
+    );
+  },
+  then: actions([Friending.acceptRequest, {
+    sender: senderResolved,
+    receiver: receiverResolved,
+  }]),
 });
 
-export const AcceptFriendRequestPlainResponse: Sync = (
-  { request },
-) => ({
+export const AcceptFriendRequestPlainResponse: Sync = ({ request }) => ({
   when: actions(
     [Requesting.request, { path: "/Friending/acceptRequest" }, { request }],
     [Friending.acceptRequest, {}, {}],
@@ -334,24 +379,117 @@ export const AcceptFriendRequestPlainError: Sync = (
   then: actions([Requesting.respond, { request, error }]),
 });
 
+// Alternate plain variant accepting senderId/receiverId field names from some frontend implementations.
+export const AcceptFriendRequestPlainIdRequest: Sync = (
+  { request, senderId, receiverId, senderUsername, receiverUsername },
+) => ({
+  when: actions(
+    [
+      Requesting.request,
+      { path: "/Friending/acceptRequest", senderId, receiverId },
+      { request },
+    ],
+  ),
+  where: async (frames) => {
+    // Map senderId -> senderUsername
+    frames = await frames.query(
+      async ({ senderId: s }) => {
+        const docs = await PasswordAuthentication._getUserByIdForSync({
+          id: s as ID,
+        });
+        const uname = Array.isArray(docs) && docs[0]?.username;
+        return uname ? [{ senderUsername: uname as unknown as ID }] : [];
+      },
+      { senderId },
+      { senderUsername },
+    );
+    if (frames.length === 0) return frames;
+    // Map receiverId -> receiverUsername
+    frames = await frames.query(
+      async ({ receiverId: r }) => {
+        const docs = await PasswordAuthentication._getUserByIdForSync({
+          id: r as ID,
+        });
+        const uname = Array.isArray(docs) && docs[0]?.username;
+        return uname ? [{ receiverUsername: uname as unknown as ID }] : [];
+      },
+      { receiverId },
+      { receiverUsername },
+    );
+    return frames;
+  },
+  then: actions([Friending.acceptRequest, {
+    sender: senderUsername,
+    receiver: receiverUsername,
+  }]),
+});
+
 export const DenyFriendRequestPlainRequest: Sync = (
-  { request, sender, receiver },
+  { request, sender, receiver, senderResolved, receiverResolved },
 ) => ({
   when: actions(
     [Requesting.request, { path: "/Friending/denyRequest", sender, receiver }, {
       request,
     }],
   ),
-  then: actions([Friending.denyRequest, { sender, receiver }]),
+  where: async (frames) => {
+    const looksLikeId = (val: unknown) =>
+      typeof val === "string" && /[0-9a-fA-F]{8}-/.test(val as string);
+    return await frames.query(
+      async ({ sender: s, receiver: r }) => {
+        const sCandidates: ID[] = [s as ID];
+        if (looksLikeId(s)) {
+          const sDocs = await PasswordAuthentication._getUserByIdForSync({
+            id: s as ID,
+          });
+          const sName = Array.isArray(sDocs) && sDocs[0]?.username;
+          if (sName) sCandidates.push(sName as unknown as ID);
+        }
+        const rCandidates: ID[] = [r as ID];
+        if (looksLikeId(r)) {
+          const rDocs = await PasswordAuthentication._getUserByIdForSync({
+            id: r as ID,
+          });
+          const rName = Array.isArray(rDocs) && rDocs[0]?.username;
+          if (rName) rCandidates.push(rName as unknown as ID);
+        }
+
+        for (const rCand of rCandidates) {
+          const rec = await Friending._getReceivedFriendRequests({
+            receiver: rCand,
+          });
+          const received = new Set((rec.receivedRequests ?? []) as ID[]);
+          for (const sCand of sCandidates) {
+            if (received.has(sCand)) {
+              return [{ senderResolved: sCand, receiverResolved: rCand }];
+            }
+          }
+        }
+        return [{ senderResolved: s as ID, receiverResolved: r as ID }];
+      },
+      { sender, receiver },
+      { senderResolved, receiverResolved },
+    );
+  },
+  then: actions([Friending.denyRequest, {
+    sender: senderResolved,
+    receiver: receiverResolved,
+  }]),
 });
 
 export const DenyFriendRequestPlainResponse: Sync = (
-  { request },
+  { request, denyResult },
 ) => ({
   when: actions(
     [Requesting.request, { path: "/Friending/denyRequest" }, { request }],
-    [Friending.denyRequest, {}, {}],
+    [Friending.denyRequest, {}, { denyResult }],
   ),
+  where: (frames) =>
+    frames.filter((f) => {
+      const res = f[denyResult] as unknown;
+      return !!res && typeof res === "object" &&
+        !("error" in (res as Record<string, unknown>));
+    }),
   then: actions([Requesting.respond, { request, status: "success" }]),
 });
 
@@ -363,6 +501,56 @@ export const DenyFriendRequestPlainError: Sync = (
     [Friending.denyRequest, {}, { error }],
   ),
   then: actions([Requesting.respond, { request, error }]),
+});
+
+// Alternate plain variant accepting senderId/receiverId field names from some frontend implementations.
+export const DenyFriendRequestPlainIdRequest: Sync = (
+  { request, senderId, receiverId, senderResolved, receiverResolved },
+) => ({
+  when: actions(
+    [
+      Requesting.request,
+      { path: "/Friending/denyRequest", senderId, receiverId },
+      { request },
+    ],
+  ),
+  where: async (frames) => {
+    // Map IDs to usernames when possible, then resolve against received requests set
+    return await frames.query(
+      async ({ senderId: s, receiverId: r }) => {
+        const sDocs = await PasswordAuthentication._getUserByIdForSync({
+          id: s as ID,
+        });
+        const rDocs = await PasswordAuthentication._getUserByIdForSync({
+          id: r as ID,
+        });
+        const sName = Array.isArray(sDocs) && sDocs[0]?.username;
+        const rName = Array.isArray(rDocs) && rDocs[0]?.username;
+        const sCandidates: ID[] = [s as ID];
+        if (sName) sCandidates.push(sName as unknown as ID);
+        const rCandidates: ID[] = [r as ID];
+        if (rName) rCandidates.push(rName as unknown as ID);
+        for (const rCand of rCandidates) {
+          const rec = await Friending._getReceivedFriendRequests({
+            receiver: rCand,
+          });
+          const received = new Set((rec.receivedRequests ?? []) as ID[]);
+          for (const sCand of sCandidates) {
+            if (received.has(sCand)) {
+              return [{ senderResolved: sCand, receiverResolved: rCand }];
+            }
+          }
+        }
+        return [{ senderResolved: (s as ID), receiverResolved: (r as ID) }];
+      },
+      { senderId, receiverId },
+      { senderResolved, receiverResolved },
+    );
+  },
+  then: actions([Friending.denyRequest, {
+    sender: senderResolved,
+    receiver: receiverResolved,
+  }]),
 });
 
 /**
@@ -998,7 +1186,9 @@ export const GetUserByUsernameResponse: Sync = ({ request, user, error }) => ({
 // --- Query: _getAllUsers ---
 // Any authenticated user can get a list of all users.
 // Note: In a real-world scenario, you might restrict this to an admin role.
-export const GetAllUsersRequest: Sync = ({ request, session, user }) => ({
+export const GetAllUsersRequest: Sync = (
+  { request, session, user, users },
+) => ({
   when: actions([
     Requesting.request,
     { path: "/api/PasswordAuthentication/_getAllUsers", session },
@@ -1006,9 +1196,19 @@ export const GetAllUsersRequest: Sync = ({ request, session, user }) => ({
   ]),
   where: async (frames) => {
     // Authenticate the user making the request
-    return await frames.query(SessionLogging._getUser, { session }, { user });
+    frames = await frames.query(SessionLogging._getUser, { session }, { user });
+    if (frames.length === 0) return frames;
+    // Fetch all users and bind them into frames as { users }
+    return await frames.query(
+      async () => {
+        const res = await PasswordAuthentication._getAllUsers();
+        return [{ users: res }];
+      },
+      {},
+      { users },
+    );
   },
-  then: actions([PasswordAuthentication._getAllUsers, {}]),
+  then: actions([Requesting.respond, { request, users }]),
 });
 
 export const GetAllUsersResponse: Sync = ({ request, users, error }) => ({
@@ -1463,18 +1663,89 @@ export const SendFriendRequestApiError: Sync = ({ request, error }) => ({
 
 // Friending: acceptRequest (API)
 export const AcceptFriendRequestApiRequest: Sync = (
-  { request, session, sender, receiver },
+  { request, session, sender, receiver, receiverClient, receiverUsername },
 ) => ({
   when: actions([
     Requesting.request,
-    { path: "/api/Friending/acceptRequest", session, sender, receiver },
+    // Bind any client-provided sender/receiver, but keep receiver under a separate symbol
+    {
+      path: "/api/Friending/acceptRequest",
+      session,
+      sender,
+      receiver: receiverClient,
+    },
     { request },
   ]),
-  // authenticate receiver via session; sender provided explicitly
+  // Authenticate receiver via session; normalize both receiver and sender to match how the request was stored (username vs id)
   where: async (frames) => {
-    return await frames.query(SessionLogging._getUser, { session }, {
+    // Step 1: receiver := authenticated user
+    frames = await frames.query(SessionLogging._getUser, { session }, {
       receiver,
     });
+    if (frames.length === 0) return frames;
+
+    // Step 2: derive receiverUsername for compatibility with stored requests that use usernames
+    frames = await frames.query(
+      async ({ receiver: r }) => {
+        const docs = await PasswordAuthentication._getUserByIdForSync({
+          id: r as ID,
+        });
+        const uname = Array.isArray(docs) && docs[0]?.username;
+        return uname ? [{ receiverUsername: uname as unknown as ID }] : [];
+      },
+      { receiver },
+      { receiverUsername },
+    );
+    if (frames.length === 0) return frames;
+
+    // Step 3: If client sent the wrong field as sender (or swapped), recover using received requests list
+    return await frames.query(
+      async (
+        {
+          receiver: rId,
+          receiverUsername: rName,
+          sender: s,
+          receiverClient: rc,
+        }: {
+          receiver: ID;
+          receiverUsername: ID;
+          sender?: ID;
+          receiverClient?: ID;
+        },
+      ) => {
+        // Gather pending senders against both possible receiver representations
+        const [recById, recByName] = await Promise.all([
+          Friending._getReceivedFriendRequests({ receiver: rId }),
+          Friending._getReceivedFriendRequests({ receiver: rName }),
+        ]);
+        const setById = new Set((recById.receivedRequests ?? []) as ID[]);
+        const setByName = new Set((recByName.receivedRequests ?? []) as ID[]);
+
+        let normalizedSender: ID | undefined = undefined;
+        // Prefer exact match to either set
+        if (s && (setById.has(s as ID) || setByName.has(s as ID))) {
+          normalizedSender = s as ID;
+        } else if (rc && (setById.has(rc as ID) || setByName.has(rc as ID))) {
+          normalizedSender = rc as ID;
+        }
+
+        // Choose receiver form that pairs with the chosen sender
+        let normalizedReceiver: ID = rName as ID; // default to username form
+        if (normalizedSender) {
+          if (setById.has(normalizedSender)) normalizedReceiver = rId as ID;
+          else if (setByName.has(normalizedSender)) {
+            normalizedReceiver = rName as ID;
+          }
+        }
+
+        return [{
+          sender: (normalizedSender ?? (s as ID)) as ID,
+          receiver: normalizedReceiver,
+        }];
+      },
+      { receiver, receiverUsername, sender, receiverClient },
+      { sender, receiver },
+    );
   },
   then: actions([Friending.acceptRequest, { sender, receiver }]),
 });
@@ -1955,7 +2226,9 @@ export const GetPostsByAuthorPlain: Sync = (
         );
         const authorNameMap = new Map<ID, string>();
         for (const aid of uniqueAuthors) {
-          const arr = await PasswordAuthentication._getUserById(aid);
+          const arr = await PasswordAuthentication._getUserByIdForSync({
+            id: aid,
+          });
           const doc = Array.isArray(arr) && arr.length > 0 ? arr[0] : undefined;
           authorNameMap.set(aid, (doc?.username as string) ?? String(aid));
         }
@@ -2045,7 +2318,9 @@ export const GetFeedForUserPlain: Sync = ({ request, user, posts }) => ({
         );
         const authorNameMap = new Map<ID, string>();
         for (const aid of uniqueAuthors) {
-          const arr = await PasswordAuthentication._getUserById(aid);
+          const arr = await PasswordAuthentication._getUserByIdForSync({
+            id: aid,
+          });
           const doc = Array.isArray(arr) && arr.length > 0 ? arr[0] : undefined;
           authorNameMap.set(aid, (doc?.username as string) ?? String(aid));
         }
@@ -2323,7 +2598,7 @@ export const GetCommentsForPostPlain: Sync = (
         const nameMap = new Map<ID, string>();
         for (const id of ids) {
           if (!id) continue;
-          const docs = await PasswordAuthentication._getUserById(id);
+          const docs = await PasswordAuthentication._getUserByIdForSync({ id });
           const doc = Array.isArray(docs) && docs.length > 0
             ? docs[0]
             : undefined;
@@ -2503,7 +2778,7 @@ export const GetCommentsForPostByPostIdPlain: Sync = (
         const nameMap = new Map<ID, string>();
         for (const id of ids) {
           if (!id) continue;
-          const docs = await PasswordAuthentication._getUserById(id);
+          const docs = await PasswordAuthentication._getUserByIdForSync({ id });
           const doc = Array.isArray(docs) && docs.length > 0
             ? docs[0]
             : undefined;
@@ -2627,7 +2902,7 @@ export const GetCommentsByAuthorByUsernamePlain: Sync = (
         const nameMap = new Map<ID, string>();
         for (const id of ids) {
           if (!id) continue;
-          const docs = await PasswordAuthentication._getUserById(id);
+          const docs = await PasswordAuthentication._getUserByIdForSync({ id });
           const doc = Array.isArray(docs) && docs.length > 0
             ? docs[0]
             : undefined;
@@ -2672,7 +2947,7 @@ export const GetCommentsForPostByPostIDPlain: Sync = (
         const nameMap = new Map<ID, string>();
         for (const id of ids) {
           if (!id) continue;
-          const docs = await PasswordAuthentication._getUserById(id);
+          const docs = await PasswordAuthentication._getUserByIdForSync({ id });
           const doc = Array.isArray(docs) && docs.length > 0
             ? docs[0]
             : undefined;
