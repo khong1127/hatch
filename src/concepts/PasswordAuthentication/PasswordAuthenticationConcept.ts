@@ -1,4 +1,4 @@
-import { Collection, Db } from "npm:mongodb";
+import { Collection, Db, MongoServerError } from "npm:mongodb";
 import { ID } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
 
@@ -32,6 +32,12 @@ export default class PasswordAuthenticationConcept {
 
   constructor(private readonly db: Db) {
     this.users = this.db.collection(PREFIX + "users");
+    // Ensure a unique index on username for fast lookups and atomic uniqueness guarantees
+    // Fire-and-forget; safe to call multiple times
+    void this.users.createIndex({ username: 1 }, {
+      unique: true,
+      name: "unique_username",
+    });
   }
 
   /**
@@ -43,22 +49,24 @@ export default class PasswordAuthenticationConcept {
   async register(
     { username, password }: { username: string; password: string },
   ): Promise<{ user: User } | { error: string }> {
-    // Check precondition: username must not already exist
-    const existingUser = await this.users.findOne({ username: username });
-    if (existingUser) {
-      return { error: "Username already taken." };
-    }
-
-    // Effect: Create a new user
+    // Try an insert-first flow; rely on unique index to enforce uniqueness and reduce 1 round-trip
     const newUser: UserDocument = {
       _id: freshID() as User,
       username: username,
       password: password, // In a real app, hash this password!
     };
 
-    await this.users.insertOne(newUser);
-
-    return { user: newUser._id };
+    try {
+      await this.users.insertOne(newUser);
+      return { user: newUser._id };
+    } catch (e) {
+      // Duplicate username (E11000)
+      if (e instanceof MongoServerError && e.code === 11000) {
+        return { error: "Username already taken." };
+      }
+      console.error("Failed to register user:", e);
+      return { error: "Failed to register user due to a database error." };
+    }
   }
 
   /**
